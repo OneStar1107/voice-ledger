@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>App 图标选形 · 冰川蓝 + 护底 scrim + 白色符号</title>
+<style>
+  :root{ --glacier:#7FE3FF; --ink:#0B0B0C; --paper:#EFF1F4; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+  section{padding:28px 34px 34px}
+  .dark{background:#0B0B0C;color:#F5F6F7}
+  .light{background:#EFF1F4;color:#17181A}
+  h1{font-size:19px;margin:0 0 4px;font-weight:600}
+  h2{font-size:13px;margin:26px 0 12px;font-weight:600;letter-spacing:.04em;opacity:.72}
+  p.note{font-size:12px;line-height:1.7;margin:6px 0 0;opacity:.6;max-width:900px}
+  .strip{display:flex;align-items:flex-end;gap:26px;flex-wrap:wrap}
+  .cell{display:flex;flex-direction:column;gap:9px;align-items:flex-start}
+  .cap{font-size:11px;letter-spacing:.06em;opacity:.55}
+  .ic{border-radius:22.5%;display:block}
+  .badge{font-size:11px;padding:3px 9px;border-radius:999px;border:1px solid currentColor;opacity:.75}
+  .homesim{display:flex;gap:22px;padding:20px 22px;border-radius:34px;background:rgba(255,255,255,.06);width:max-content}
+  .light .homesim{background:rgba(23,24,26,.05)}
+  .app{display:flex;flex-direction:column;gap:7px;align-items:center;font-size:10px;opacity:.85}
+  .ph{border-radius:22.5%;background:rgba(255,255,255,.10)}
+  .light .ph{background:rgba(23,24,26,.10)}
+  table{border-collapse:collapse;font-size:12px;margin-top:8px}
+  td,th{border:1px solid rgba(128,128,128,.28);padding:5px 10px;text-align:left}
+</style>
+</head>
+<body>
+
+<section class="dark">
+  <h1>App 图标选形 · 深色桌面</h1>
+  <p class="note">冰川蓝线性渐变 + 护底 scrim + <b>纯白符号</b>（用户已定：渐变底 + 护底 scrim + 白色符号）。
+  1024×1024 满幅、无圆角、无透明——iOS 自行切角，此处预览用的 22.5% 圆角仅作观感参考。</p>
+
+  <h2>A · 账目柱 + 上行折线（金融感最强）</h2>
+  <div class="strip">
+    <div class="cell"><img class="ic" src="app-icon-a.svg" width="256" height="256"><span class="cap">256px</span></div>
+    <div class="cell"><img class="ic" src="app-icon-a.svg" width="180" height="180"><span class="cap">180</span></div>
+    <div class="cell"><img class="ic" src="app-icon-a.svg" width="120" height="120"><span class="cap">120</span></div>
+    <div class="cell"><img class="ic" src="app-icon-a.svg" width="60" height="60"><span class="cap">60</span></div>
+    <div class="cell"><img class="ic" src="app-icon-a.svg" width="40" height="40"><span class="cap">40</span></div>
+  </div>
+
+  <h2>B · 麦克风（胶囊 = 三条账目）+ 声波弧（语音语义最直白）</h2>
+  <div class="strip">
+    <div class="cell"><img class="ic" src="app-icon-b.svg" width="256" height="256"><span class="cap">256px</span></div>
+    <div class="cell"><img class="ic" src="app-icon-b.svg" width="180" height="180"><span class="cap">180</span></div>
+    <div class="cell"><img class="ic" src="app-icon-b.svg" width="120" height="120"><span class="cap">120</span></div>
+    <div class="cell"><img class="ic" src="app-icon-b.svg" width="60" height="60"><span class="cap">60</span></div>
+    <div class="cell"><img class="ic" src="app-icon-b.svg" width="40" height="40"><span class="cap">40</span></div>
+  </div>
+
+  <h2>C · 声波竖条组（最小尺寸下最不易糊）</h2>
+  <div class="strip">
+    <div class="cell"><img class="ic" src="app-icon-c.svg" width="256" height="256"><span class="cap">256px</span></div>
+    <div class="cell"><img class="ic" src="app-icon-c.svg" width="180" height="180"><span class="cap">180</span></div>
+    <div class="cell"><img class="ic" src="app-icon-c.svg" width="120" height="120"><span class="cap">120</span></div>
+    <div class="cell"><img class="ic" src="app-icon-c.svg" width="60" height="60"><span class="cap">60</span></div>
+    <div class="cell"><img class="ic" src="app-icon-c.svg" width="40" height="40"><span class="cap">40</span></div>
+  </div>
+
+  <h2>桌面模拟 · 60px 实况（三款并排 + 占位）</h2>
+  <div class="homesim">
+    <div class="app"><img class="ic" src="app-icon-a.svg" width="60" height="60"><span>VoiceLedger</span></div>
+    <div class="app"><img class="ic" src="app-icon-b.svg" width="60" height="60"><span>VoiceLedger</span></div>
+    <div class="app"><img class="ic" src="app-icon-c.svg" width="60" height="60"><span>VoiceLedger</span></div>
+    <div class="app"><div class="ph" style="width:60px;height:60px"></div><span>其他</span></div>
+  </div>
+</section>
+
+<section class="light">
+  <h1>App 图标选形 · 浅色桌面（同一枚图标，不随模式切换）</h1>
+  <p class="note">关键验收：图标自带对比度，必须在 <b>#EFF1F4 浅桌面</b>与 <b>#0B0B0C 深桌面</b>上都立得住。</p>
+
+  <h2>A · 账目柱 + 上行折线</h2>
+  <div class="strip">
+    <div class="cell"><img class="ic" src="app-icon-a.svg" width="256" height="256"><span class="cap">256px</span></div>
+    <div class="cell"><img class="ic" src="app-icon-a.svg" width="180" height="180"><span class="cap">180</span></div>
+    <div class="cell"><img class="ic" src="app-icon-a.svg" width="120" height="120"><span class="cap">120</span></div>
+    <div class="cell"><img class="ic" src="app-icon-a.svg" width="60" height="60"><span class="cap">60</span></div>
+    <div class="cell"><img class="ic" src="app-icon-a.svg" width="40" height="40"><span class="cap">40</span></div>
+  </div>
+
+  <h2>B · 麦克风（胶囊 = 三条账目）+ 声波弧</h2>
+  <div class="strip">
+    <div class="cell"><img class="ic" src="app-icon-b.svg" width="256" height="256"><span class="cap">256px</span></div>
+    <div class="cell"><img class="ic" src="app-icon-b.svg" width="180" height="180"><span class="cap">180</span></div>
+    <div class="cell"><img class="ic" src="app-icon-b.svg" width="120" height="120"><span class="cap">120</span></div>
+    <div class="cell"><img class="ic" src="app-icon-b.svg" width="60" height="60"><span class="cap">60</span></div>
+    <div class="cell"><img class="ic" src="app-icon-b.svg" width="40" height="40"><span class="cap">40</span></div>
+  </div>
+
+  <h2>C · 声波竖条组</h2>
+  <div class="strip">
+    <div class="cell"><img class="ic" src="app-icon-c.svg" width="256" height="256"><span class="cap">256px</span></div>
+    <div class="cell"><img class="ic" src="app-icon-c.svg" width="180" height="180"><span class="cap">180</span></div>
+    <div class="cell"><img class="ic" src="app-icon-c.svg" width="120" height="120"><span class="cap">120</span></div>
+    <div class="cell"><img class="ic" src="app-icon-c.svg" width="60" height="60"><span class="cap">60</span></div>
+    <div class="cell"><img class="ic" src="app-icon-c.svg" width="40" height="40"><span class="cap">40</span></div>
+  </div>
+
+  <h2>桌面模拟 · 60px 实况</h2>
+  <div class="homesim">
+    <div class="app"><img class="ic" src="app-icon-a.svg" width="60" height="60"><span>VoiceLedger</span></div>
+    <div class="app"><img class="ic" src="app-icon-b.svg" width="60" height="60"><span>VoiceLedger</span></div>
+    <div class="app"><img class="ic" src="app-icon-c.svg" width="60" height="60"><span>VoiceLedger</span></div>
+    <div class="app"><div class="ph" style="width:60px;height:60px"></div><span>其他</span></div>
+  </div>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,24 @@
+# ── AI / 工具工作区（与产品无关，勿入库） ──
+.dsh-vision-router/
+.graphflow/
+.proto-check/
+graphflow-out/
+.workbuddy/
+.vscode/
+install-gh-cli.ps1
+install-gh-cli.zh.json
+
+# ── 构建与依赖 ──────────────────────────
+node_modules/
+dist/
+
+# ── 临时 / 备份文件 ─────────────────────
+*.bak
+*.bak-*
+*.tmp
+~$*
+
+# ── 系统 / 编辑器 ───────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,1670 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>语音记账 · iOS 原型 v1</title>
+<style>
+/* ============================================================
+   设计令牌
+   ============================================================ */
+:root{
+  --bg:#F4F1EC;
+  --surface:#FFFFFF;
+  --surface-2:#FAF8F5;
+  --surface-3:#F0ECE5;
+  --ink:#1B1D21;
+  --ink-2:#5C616B;
+  --ink-3:#9AA0AA;
+  --line:#E6E1D9;
+  --line-2:#EFEBE4;
+
+  --accent:#C0623A;          /* 唯一强调色：支出语义 */
+  --accent-weak:#F3E3DA;
+  --pos:#2F7A68;
+  --pos-weak:#DFEBE7;
+  --danger:#A8402F;
+
+  /* 分类色：与铜橙同源的暖色族 + 冷色两点，全部由 oklch 派生 */
+  --c1:oklch(0.62 0.13 45);    /* 铜橙  */
+  --c2:oklch(0.66 0.10 110);   /* 橄榄  */
+  --c3:oklch(0.60 0.09 200);   /* 石青  */
+  --c4:oklch(0.66 0.11 75);    /* 赭黄  */
+  --c5:oklch(0.58 0.11 300);   /* 紫灰  */
+  --c6:oklch(0.64 0.08 155);   /* 苔绿  */
+  --c7:oklch(0.70 0.06 30);    /* 陶土  */
+  --c8:oklch(0.62 0.07 260);   /* 靛灰  */
+  --c9:oklch(0.55 0.02 90);    /* 未分类 中性 */
+
+  --r-s:10px; --r-m:14px; --r-l:22px; --r-xl:28px;
+  --sh-1:0 1px 2px rgba(24,20,14,.05);
+  --sh-2:0 6px 18px rgba(24,20,14,.09);
+  --sh-3:0 18px 48px rgba(24,20,14,.20);
+  --ease:cubic-bezier(.2,.8,.2,1);
+  --dur:200ms;
+  --scale:1;
+}
+[data-theme="dark"]{
+  --bg:#131519;
+  --surface:#1C1F24;
+  --surface-2:#22262C;
+  --surface-3:#2A2F36;
+  --ink:#F2F0EC;
+  --ink-2:#A8AEB8;
+  --ink-3:#7C838D;
+  --line:#2C3138;
+  --line-2:#242830;
+  --accent:#D9794F;
+  --accent-weak:#3A2A22;
+  --pos:#5FAF99;
+  --pos-weak:#1F312C;
+  --danger:#E0806C;
+  --sh-1:0 1px 2px rgba(0,0,0,.3);
+  --sh-2:0 6px 18px rgba(0,0,0,.4);
+  --sh-3:0 18px 48px rgba(0,0,0,.6);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:
+    radial-gradient(1200px 600px at 10% -10%, color-mix(in oklab, var(--accent) 7%, transparent), transparent 60%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  font-size:15px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  text-wrap:pretty;
+}
+[data-motion="off"] *{transition:none !important;animation:none !important}
+
+/* ============================================================
+   舞台 / 顶栏
+   ============================================================ */
+.topbar{
+  position:sticky; top:0; z-index:50;
+  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  padding:14px 24px;
+  background:color-mix(in oklab, var(--bg) 82%, transparent);
+  backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line);
+}
+.brand{display:flex;align-items:center;gap:10px}
+.brand h1{font-size:16px;margin:0;letter-spacing:.2px;font-weight:600}
+.badge{
+  font-size:11px;padding:3px 8px;border-radius:999px;
+  background:var(--accent-weak); color:var(--accent);
+  border:1px solid color-mix(in oklab, var(--accent) 28%, transparent);
+  white-space:nowrap;
+}
+.hints{display:flex;gap:16px;flex-wrap:wrap;color:var(--ink-2);font-size:12.5px;margin-left:auto}
+.hints b{color:var(--ink);font-weight:600}
+
+.stage{
+  display:flex; flex-wrap:wrap; gap:34px 30px;
+  align-items:flex-start; justify-content:center;
+  padding:34px 28px 120px;
+}
+.frame-wrap{position:relative}
+.frame-label{
+  text-align:center;font-size:12px;color:var(--ink-3);
+  margin-bottom:10px;letter-spacing:.6px;text-transform:uppercase;
+}
+.frame-label b{color:var(--ink-2);letter-spacing:0;text-transform:none;font-weight:600}
+.device{
+  width:390px;height:844px;border-radius:52px;
+  background:#111318;
+  padding:11px;position:relative;
+  box-shadow:var(--sh-3), 0 0 0 1px rgba(255,255,255,.05) inset;
+  transform:scale(var(--scale)); transform-origin:top center;
+}
+[data-theme="dark"] .device{background:#0A0B0D}
+.device::after{
+  content:"";position:absolute;inset:11px;border-radius:42px;
+  box-shadow:0 0 0 1px rgba(0,0,0,.5) inset;pointer-events:none;z-index:6;
+}
+.dynamic-island{
+  position:absolute;top:23px;left:50%;transform:translateX(-50%);
+  width:112px;height:30px;border-radius:999px;background:#0A0B0D;z-index:5;
+}
+.screen{
+  position:relative;width:100%;height:100%;border-radius:42px;
+  background:var(--surface);overflow:hidden;
+  display:flex;flex-direction:column;
+  color:var(--ink);
+}
+
+/* ============================================================
+   屏幕内部结构
+   ============================================================ */
+.statusbar{
+  height:54px;flex:none;padding:0 30px 0 34px;
+  display:flex;align-items:flex-end;gap:6px;
+  font-size:13px;font-weight:600;
+  padding-bottom:6px;
+}
+.statusbar .grow{flex:1}
+.statusbar .sig{display:flex;gap:2px;align-items:flex-end;height:11px}
+.statusbar .sig i{display:block;width:3px;background:var(--ink);border-radius:1px}
+.statusbar .bat{
+  width:22px;height:11px;border:1.4px solid var(--ink);border-radius:3px;
+  position:relative;margin-left:4px;
+}
+.statusbar .bat::before{content:"";position:absolute;inset:1.6px;background:var(--ink);border-radius:1px}
+.statusbar .bat::after{content:"";position:absolute;right:-3.4px;top:3.4px;width:2px;height:4px;background:var(--ink);border-radius:0 1px 1px 0}
+
+.nav{
+  flex:none;padding:2px 18px 10px;
+  display:flex;align-items:center;gap:8px;min-height:44px;
+}
+.nav h2{font-size:26px;margin:0;font-weight:700;letter-spacing:-.4px}
+.nav .sub{font-size:12.5px;color:var(--ink-3);margin-left:auto}
+.nav-btn{
+  width:44px;height:44px;flex:none;border:0;background:transparent;cursor:pointer;
+  color:var(--accent);font-size:15px;display:grid;place-items:center;border-radius:999px;
+}
+.nav-btn:hover{background:var(--surface-3)}
+.nav-btn.back{font-size:24px;color:var(--ink-2)}
+
+.scroll{
+  flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;
+  padding:0 18px 18px;
+  scrollbar-width:thin;
+}
+.scroll::-webkit-scrollbar{width:0}
+
+/* tab bar */
+.tabbar{
+  flex:none;display:flex;padding:8px 4px 20px;
+  background:color-mix(in oklab, var(--surface) 88%, transparent);
+  backdrop-filter:blur(18px);
+  border-top:1px solid var(--line);
+}
+.tab{
+  flex:1;border:0;background:transparent;cursor:pointer;
+  color:var(--ink-3);font-size:11px;font-family:inherit;
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  padding:6px 0;min-height:52px;border-radius:var(--r-m);
+  transition:color var(--dur) var(--ease);
+}
+.tab .glyph{width:24px;height:24px;flex:none;display:block}
+.tab .glyph svg{width:24px;height:24px;display:block}
+.tab[data-on="1"]{color:var(--accent);font-weight:600}
+.tab:hover{color:var(--ink-2)}
+
+/* ============================================================
+   记账页
+   ============================================================ */
+.hero{
+  background:var(--surface-2);border:1px solid var(--line-2);
+  border-radius:var(--r-l);padding:18px 18px 16px;margin-bottom:14px;
+}
+.hero .k{font-size:12.5px;color:var(--ink-2);display:flex;align-items:center;gap:8px}
+.hero .v{
+  font-size:40px;font-weight:700;letter-spacing:-1.4px;margin:8px 0 2px;
+  font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;
+  line-height:1.05;
+}
+.hero .v small{font-size:20px;font-weight:600;color:var(--ink-2);margin-right:2px;letter-spacing:0}
+.hero .foot{font-size:12px;color:var(--ink-3);display:flex;gap:12px;flex-wrap:wrap}
+.hero .foot em{font-style:normal;color:var(--ink-2);font-variant-numeric:tabular-nums}
+
+.entries{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.entry{
+  border:0;cursor:pointer;font-family:inherit;text-align:left;
+  border-radius:var(--r-l);padding:16px 16px 14px;min-height:104px;
+  display:flex;flex-direction:column;justify-content:space-between;gap:10px;
+  transition:transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.entry:active{transform:scale(.975)}
+.entry.voice{background:var(--accent);color:#fff;box-shadow:var(--sh-2)}
+.entry.voice:hover{filter:brightness(1.05)}
+.entry.manual{background:var(--surface-2);color:var(--ink);border:1px solid var(--line)}
+.entry.manual:hover{background:var(--surface-3)}
+.entry .ic{
+  width:34px;height:34px;border-radius:999px;flex:none;
+  border:1.8px solid currentColor;position:relative;opacity:.95;
+}
+.entry.voice .ic::before{content:"";position:absolute;left:50%;top:9px;width:6px;height:10px;margin-left:-3px;border-radius:3px;background:currentColor}
+.entry.voice .ic::after{content:"";position:absolute;left:50%;top:17px;width:14px;height:7px;margin-left:-7px;border:1.8px solid currentColor;border-top:0;border-radius:0 0 8px 8px}
+.entry.manual .ic::before{content:"";position:absolute;left:50%;top:50%;width:12px;height:1.8px;margin:-.9px 0 0 -6px;background:currentColor}
+.entry.manual .ic::after{content:"";position:absolute;left:50%;top:50%;width:1.8px;height:12px;margin:-6px 0 0 -.9px;background:currentColor}
+.entry .t{display:block;font-size:16.5px;font-weight:650;letter-spacing:-.2px}
+.entry .d{display:block;font-size:11.5px;opacity:.82;margin-top:3px;line-height:1.45}
+.entry.voice .d{opacity:.9}
+
+.sec-head{
+  display:flex;align-items:baseline;gap:8px;margin:4px 2px 10px;
+}
+.sec-head h3{font-size:14px;margin:0;font-weight:650}
+.sec-head .sum{font-size:12px;color:var(--ink-3);margin-left:auto;font-variant-numeric:tabular-nums}
+
+.list{list-style:none;margin:0;padding:0}
+.row{position:relative;overflow:hidden;border-radius:var(--r-m);margin-bottom:8px;background:var(--danger)}
+.row-del{
+  position:absolute;inset:0 0 0 auto;width:76px;border:0;cursor:pointer;font-family:inherit;
+  background:transparent;color:#fff;font-size:13.5px;font-weight:600;
+}
+.row-face{
+  position:relative;background:var(--surface-2);border:1px solid var(--line-2);
+  border-radius:var(--r-m);padding:11px 12px;display:flex;align-items:center;gap:12px;
+  transition:transform 220ms var(--ease); touch-action:pan-y; z-index:1;
+}
+.row-face:hover{background:var(--surface-3)}
+.dot{width:34px;height:34px;border-radius:11px;flex:none;display:grid;place-items:center;color:#fff;font-size:12px;font-weight:700}
+.row .mid{flex:1;min-width:0}
+.row .mid .tt{font-size:14.5px;font-weight:560;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .mid .mm{font-size:11.5px;color:var(--ink-3);margin-top:2px;font-variant-numeric:tabular-nums}
+.row .amt{
+  font-size:15.5px;font-weight:650;font-variant-numeric:tabular-nums;
+  letter-spacing:-.2px;white-space:nowrap;
+}
+.row .amt.neg::before{content:"−";opacity:.5;margin-right:1px}
+
+.empty{
+  text-align:center;padding:36px 20px;color:var(--ink-3);
+  border:1px dashed var(--line);border-radius:var(--r-l);background:var(--surface-2);
+}
+.empty .big{font-size:32px;color:var(--ink-3);opacity:.5;margin-bottom:6px}
+.empty p{margin:0 0 4px;font-size:13.5px;color:var(--ink-2)}
+.empty span{font-size:12px}
+
+.daygroup{margin-bottom:16px}
+.daybar{
+  display:flex;align-items:baseline;gap:8px;padding:6px 2px 8px;
+  position:sticky;top:0;background:var(--surface);z-index:2;
+}
+.daybar .d{font-size:13.5px;font-weight:650}
+.daybar .w{font-size:11.5px;color:var(--ink-3)}
+.daybar .s{margin-left:auto;font-size:12.5px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+
+/* ============================================================
+   统计页
+   ============================================================ */
+.seg{
+  display:flex;background:var(--surface-3);border-radius:999px;padding:3px;margin:0 0 14px;
+}
+.seg button{
+  flex:1;border:0;background:transparent;cursor:pointer;font-family:inherit;
+  font-size:13.5px;color:var(--ink-2);padding:8px 0;border-radius:999px;min-height:44px;
+  transition:background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.seg button[data-on="1"]{background:var(--surface);color:var(--ink);font-weight:650;box-shadow:var(--sh-1)}
+.seg button:hover{color:var(--ink)}
+
+.kpis{display:grid;grid-template-columns:1.35fr 1fr 1fr;gap:8px;margin-bottom:16px}
+.kpi{background:var(--surface-2);border:1px solid var(--line-2);border-radius:var(--r-m);padding:11px 12px}
+.kpi .k{font-size:11px;color:var(--ink-3);white-space:nowrap}
+.kpi .v{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.4px;margin-top:3px;white-space:nowrap}
+.kpi .v.sm{font-size:15px}
+
+.card{
+  background:var(--surface-2);border:1px solid var(--line-2);
+  border-radius:var(--r-l);padding:16px 14px 12px;margin-bottom:14px;
+}
+.card h4{margin:0 0 2px;font-size:13.5px;font-weight:650}
+.card .cap{font-size:11.5px;color:var(--ink-3);margin-bottom:14px}
+
+.chart{display:flex;align-items:flex-end;gap:3px;height:132px;padding-top:8px}
+.chart .col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:6px;min-width:0}
+.chart .bar{
+  width:100%;max-width:26px;background:color-mix(in oklab, var(--accent) 78%, var(--surface));
+  border-radius:4px 4px 2px 2px;min-height:3px;
+  transition:height 260ms var(--ease);
+}
+.chart.many{gap:2px}
+.chart.many .bar{border-radius:3px 3px 1px 1px}
+.chart .col.mid .bar{background:var(--accent)}
+.chart .col.zero .bar{background:var(--line);min-height:2px}
+.chart .col.future .bar{background:var(--line);min-height:2px}
+.chart .col.future .x{color:color-mix(in oklab, var(--ink-3) 55%, transparent)}
+.chart .x{font-size:9.5px;color:var(--ink-3);white-space:nowrap;font-variant-numeric:tabular-nums}
+.chart .col.mid .x{color:var(--ink);font-weight:600}
+
+.dist{display:flex;flex-direction:column;gap:11px}
+.dist .d-row{display:grid;grid-template-columns:64px 1fr 74px;align-items:center;gap:10px}
+.dist .name{font-size:12.5px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dist .track{display:block;height:9px;background:var(--surface-3);border-radius:999px;overflow:hidden}
+.dist .fill{display:block;height:100%;min-width:3px;border-radius:999px;transition:width 300ms var(--ease)}
+.dist .num{font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.dist .num b{color:var(--ink);font-weight:650}
+.legend-note{font-size:11px;color:var(--ink-3);margin-top:12px;line-height:1.45}
+
+/* ============================================================
+   历史页
+   ============================================================ */
+.monthnav{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.monthnav .m{font-size:16px;font-weight:650;font-variant-numeric:tabular-nums;flex:1;text-align:center}
+.monthnav button{
+  width:44px;height:44px;border:1px solid var(--line);background:var(--surface-2);
+  border-radius:var(--r-s);cursor:pointer;color:var(--ink-2);font-size:15px;font-family:inherit;
+  display:grid;place-items:center;
+}
+.monthnav button:hover{background:var(--surface-3);color:var(--ink)}
+
+/* ============================================================
+   设置页
+   ============================================================ */
+.group{background:var(--surface-2);border:1px solid var(--line-2);border-radius:var(--r-l);margin-bottom:14px;overflow:hidden}
+.group > .gh{
+  padding:12px 14px 8px;font-size:11.5px;color:var(--ink-3);letter-spacing:.4px;
+}
+.grow-item{
+  display:flex;align-items:center;gap:12px;padding:13px 14px;
+  border-top:1px solid var(--line-2);min-height:54px;
+}
+.group > .grow-item:first-child{border-top:0}
+.grow-item .label{font-size:14.5px;font-weight:520;flex:1;min-width:0}
+.grow-item .label small{display:block;font-size:11.5px;color:var(--ink-3);font-weight:400;margin-top:2px}
+.grow-item .val{font-size:13.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.grow-item .chev{color:var(--ink-3);display:flex;align-items:center}
+.grow-item .chev svg{width:17px;height:17px}
+button.grow-item{
+  width:100%;border:0;background:transparent;cursor:pointer;font-family:inherit;
+  color:inherit;text-align:left;
+}
+button.grow-item:hover{background:var(--surface-3)}
+.grow-item.danger .label{color:var(--danger)}
+/* 行内控件较宽时（如三档货币）改为上下排，避免标签被挤成窄列 */
+.grow-item.stack{flex-direction:column;align-items:stretch;gap:10px;padding-bottom:15px}
+.grow-item.stack .label{flex:none}
+.grow-item.stack .pick{justify-content:stretch;flex-wrap:nowrap}
+.grow-item.stack .pick button{flex:1}
+
+.pick{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.pick button{
+  border:1px solid var(--line);background:var(--surface);cursor:pointer;font-family:inherit;
+  font-size:13px;color:var(--ink-2);padding:8px 13px;border-radius:999px;min-height:44px;
+}
+.pick button[data-on="1"]{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.pick button:hover{border-color:var(--ink-3)}
+
+/* 分类管理 */
+.cat-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--line-2)}
+.cat-row:first-child{border-top:0}
+.cat-row .cnt{font-size:11.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.icon-btn{
+  border:1px solid var(--line);background:var(--surface);border-radius:var(--r-s);
+  min-width:44px;height:36px;cursor:pointer;font-family:inherit;font-size:13px;color:var(--ink-2);
+}
+.icon-btn:hover{background:var(--surface-3);color:var(--ink)}
+.icon-btn.danger{color:var(--danger);border-color:color-mix(in oklab, var(--danger) 30%, var(--line))}
+
+/* ============================================================
+   浮层：录音 / 解析 / 权限
+   ============================================================ */
+.overlay{
+  position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:22px;
+  background:rgba(12,12,14,.72);backdrop-filter:blur(8px);color:#fff;
+  animation:fade 180ms var(--ease);
+}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.overlay .tip{font-size:13.5px;color:rgba(255,255,255,.72);text-align:center;padding:0 40px;line-height:1.5}
+.overlay .timer{
+  font-size:44px;font-weight:250;font-variant-numeric:tabular-nums;letter-spacing:1px;
+  font-feature-settings:"tnum" 1;
+}
+.overlay .timer small{font-size:20px;opacity:.5}
+.mic{
+  width:92px;height:92px;border-radius:999px;background:var(--accent);
+  display:grid;place-items:center;position:relative;
+  animation:pulse 1.6s var(--ease) infinite;
+}
+@keyframes pulse{
+  0%{box-shadow:0 0 0 0 color-mix(in oklab, var(--accent) 55%, transparent)}
+  100%{box-shadow:0 0 0 34px transparent}
+}
+.mic.cancel{background:#7A7A7E;animation:none}
+.mic .bar-ic{display:flex;gap:3.5px;align-items:center;height:34px}
+.mic .bar-ic i{width:4px;border-radius:2px;background:#fff;height:10px;animation:wave 900ms var(--ease) infinite}
+.mic .bar-ic i:nth-child(2){animation-delay:120ms}
+.mic .bar-ic i:nth-child(3){animation-delay:240ms}
+.mic .bar-ic i:nth-child(4){animation-delay:360ms}
+.mic .bar-ic i:nth-child(5){animation-delay:480ms}
+@keyframes wave{0%,100%{height:9px}50%{height:30px}}
+.overlay .hintline{font-size:12px;color:rgba(255,255,255,.55);letter-spacing:.3px}
+.spinner{
+  width:34px;height:34px;border-radius:999px;
+  border:2.5px solid rgba(255,255,255,.22);border-top-color:#fff;
+  animation:spin 900ms linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* 加载态（loading）：语音识别中、CSV 生成中 */
+.loading{display:inline-flex;align-items:center;gap:8px;color:var(--ink-2);font-size:13px}
+.loading .spinner{width:16px;height:16px;border-width:2px;border-color:var(--line);border-top-color:var(--accent)}
+.btn.primary[disabled] .spinner,.btn[disabled] .spinner{border-color:rgba(255,255,255,.3);border-top-color:#fff}
+
+/* ============================================================
+   底部表单 sheet
+   ============================================================ */
+.scrim{position:absolute;inset:0;background:rgba(14,12,10,.42);z-index:22;animation:fade 160ms var(--ease)}
+.sheet{
+  position:absolute;left:0;right:0;bottom:0;z-index:23;
+  background:var(--surface);border-radius:var(--r-xl) var(--r-xl) 0 0;
+  padding:10px 18px 22px;max-height:88%;overflow-y:auto;
+  box-shadow:var(--sh-3);animation:up 260ms var(--ease);
+}
+@keyframes up{from{transform:translateY(18px);opacity:.6}to{transform:none;opacity:1}}
+.sheet .grab{width:38px;height:4.5px;border-radius:999px;background:var(--line);margin:0 auto 14px}
+.sheet h3{margin:0 0 4px;font-size:19px;font-weight:700;letter-spacing:-.3px}
+.sheet .sub{font-size:12.5px;color:var(--ink-3);margin-bottom:16px;line-height:1.45}
+.heard{
+  background:var(--accent-weak);border:1px solid color-mix(in oklab, var(--accent) 22%, transparent);
+  color:var(--accent);border-radius:var(--r-m);padding:11px 12px;margin-bottom:14px;font-size:13px;
+}
+.heard b{font-weight:650}
+.notice{
+  background:var(--surface-3);border-radius:var(--r-m);padding:11px 12px;margin-bottom:14px;
+  font-size:12.5px;color:var(--ink-2);line-height:1.5;
+}
+.field{margin-bottom:14px}
+.field > label{display:block;font-size:12px;color:var(--ink-3);margin-bottom:6px}
+.field input{
+  width:100%;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);
+  border-radius:var(--r-m);padding:12px 13px;font-size:16px;font-family:inherit;min-height:48px;
+  font-variant-numeric:tabular-nums;
+}
+.field input:focus{outline:2px solid color-mix(in oklab, var(--accent) 45%, transparent);outline-offset:1px;border-color:var(--accent)}
+.field.amount input{
+  font-size:30px;font-weight:700;letter-spacing:-1px;padding:10px 13px;
+  font-feature-settings:"tnum" 1;
+}
+.field .err{color:var(--danger);font-size:12px;margin-top:6px}
+.field .quick{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.field .quick button{
+  border:1px solid var(--line);background:var(--surface-2);border-radius:999px;cursor:pointer;
+  font-family:inherit;font-size:12.5px;color:var(--ink-2);padding:8px 13px;min-height:44px;
+}
+.field .quick button:hover{background:var(--surface-3);color:var(--ink)}
+.field .quick button[data-on="1"]{border-color:var(--accent);color:var(--accent)}
+.chips{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.chip{
+  border:1px solid var(--line);background:var(--surface-2);border-radius:var(--r-m);cursor:pointer;
+  font-family:inherit;font-size:13px;color:var(--ink-2);padding:11px 6px;min-height:46px;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.chip:hover{background:var(--surface-3)}
+.chip[data-on="1"]{border-color:var(--accent);background:var(--accent-weak);color:var(--accent);font-weight:600}
+.chip .sw{width:9px;height:9px;border-radius:999px;flex:none}
+.actions{display:flex;gap:10px;margin-top:20px}
+.btn{
+  flex:1;border-radius:var(--r-m);border:1px solid transparent;cursor:pointer;font-family:inherit;
+  font-size:15.5px;font-weight:620;padding:14px 16px;min-height:50px;
+  transition:filter var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.ghost{background:var(--surface-2);border-color:var(--line);color:var(--ink)}
+.btn.ghost:hover{background:var(--surface-3)}
+.btn.danger{background:var(--danger);color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* toast */
+.toast{
+  position:absolute;left:16px;right:16px;bottom:88px;z-index:30;
+  background:var(--ink);color:var(--surface);
+  border-radius:var(--r-m);padding:12px 14px;display:flex;align-items:center;gap:12px;
+  font-size:13.5px;box-shadow:var(--sh-3);
+  animation:up 200ms var(--ease);
+}
+.toast .undo{
+  margin-left:auto;border:0;background:transparent;color:var(--accent);
+  font-family:inherit;font-size:13.5px;font-weight:650;cursor:pointer;min-height:44px;padding:0 8px;
+}
+[data-theme="dark"] .toast{background:var(--surface-3);color:var(--ink)}
+
+/* 口径注释 */
+.note{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:10.5px;letter-spacing:.2px;
+  background:var(--pos-weak);color:var(--pos);
+  border:1px solid color-mix(in oklab, var(--pos) 26%, transparent);
+  border-radius:999px;padding:3px 9px;margin:0 0 8px;
+}
+.note::before{content:"◆";font-size:8px}
+
+/* ============================================================
+   Tweaks
+   ============================================================ */
+.tweak-btn{
+  position:fixed;right:20px;bottom:20px;z-index:90;
+  width:52px;height:52px;border-radius:999px;border:1px solid var(--line);
+  background:var(--surface);color:var(--ink);cursor:pointer;box-shadow:var(--sh-2);
+  font-family:inherit;font-size:12px;font-weight:650;
+}
+.tweak-btn:hover{background:var(--surface-3)}
+.tweak-panel{
+  position:fixed;right:20px;bottom:84px;z-index:91;width:296px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-l);
+  box-shadow:var(--sh-3);padding:14px 14px 16px;display:none;
+  max-height:76vh;overflow-y:auto;
+}
+.tweak-panel[data-open="1"]{display:block}
+.tweak-panel h3{margin:0 0 2px;font-size:14px;font-weight:700}
+.tweak-panel .cap{font-size:11.5px;color:var(--ink-3);margin-bottom:12px}
+.tw{margin-bottom:13px}
+.tw > .k{font-size:11.5px;color:var(--ink-3);margin-bottom:6px}
+.tw .pick{justify-content:flex-start}
+.tw .pick button{font-size:12px;padding:5px 9px;min-height:30px}
+.tw hr{border:0;border-top:1px solid var(--line-2);margin:14px 0}
+.tw .foot{display:flex;gap:8px}
+.tw .foot button{
+  flex:1;border:1px solid var(--line);background:var(--surface-2);border-radius:var(--r-s);
+  cursor:pointer;font-family:inherit;font-size:12px;color:var(--ink-2);padding:8px 0;min-height:34px;
+}
+.tw .foot button:hover{background:var(--surface-3);color:var(--ink)}
+
+@media (prefers-reduced-motion: reduce){
+  *{animation:none !important;transition:none !important}
+}
+
+/* ============================================================
+   无障碍：键盘焦点（鼠标点按不显示，仅键盘/辅助设备显示）
+   ============================================================ */
+:focus{outline:none}
+:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:2px;
+  border-radius:6px;
+}
+.tab:focus-visible{outline-offset:-4px}
+.chip:focus-visible,.seg button:focus-visible,.quick button:focus-visible{outline-offset:1px}
+input:focus-visible{outline:2px solid var(--accent);outline-offset:0;border-radius:8px}
+</style>
+</head>
+<body data-theme="light" data-motion="on">
+
+<header class="topbar">
+  <div class="brand">
+    <h1>语音记账 · iOS 原型</h1>
+    <span class="badge">v1 · 示例数据</span>
+    <span class="badge" style="background:var(--surface-3);color:var(--ink-2);border-color:var(--line)">4 屏可交互</span>
+  </div>
+  <div class="hints">
+    <span><b>长按</b>语音输入录音 · 上滑取消</span>
+    <span><b>左滑</b>记录删除 · 点击编辑</span>
+    <span><b>切页</b>底部 Tab / 分段控件</span>
+  </div>
+</header>
+
+<main class="stage" id="stage"></main>
+
+<button class="tweak-btn" id="tweakBtn" aria-expanded="false">Tweaks</button>
+<div class="tweak-panel" id="tweakPanel" data-open="0">
+  <h3>Tweaks</h3>
+  <div class="cap">原型参数，随时切换对照</div>
+
+  <div class="tw">
+    <div class="k">外观</div>
+    <div class="pick" data-tweak="theme">
+      <button data-v="light">浅色</button><button data-v="dark">深色</button>
+    </div>
+  </div>
+
+  <div class="tw">
+    <div class="k">货币单位（D2：只换符号，不换算）</div>
+    <div class="pick" data-tweak="currency">
+      <button data-v="CNY">¥ 人民币</button><button data-v="USD">$ 美元</button><button data-v="EUR">€ 欧元</button>
+    </div>
+  </div>
+
+  <div class="tw">
+    <div class="k">语音结果处理（D6）</div>
+    <div class="pick" data-tweak="voiceMode">
+      <button data-v="confirm">预填确认卡</button><button data-v="instant">说完即记</button>
+    </div>
+  </div>
+
+  <div class="tw">
+    <div class="k">演示状态（语音链路）</div>
+    <div class="pick" data-tweak="voiceDemo">
+      <button data-v="normal">正常</button><button data-v="fail">识别失败</button>
+      <button data-v="offline">无网络</button><button data-v="denied">权限被拒</button>
+    </div>
+  </div>
+
+  <div class="tw">
+    <div class="k">动效</div>
+    <div class="pick" data-tweak="motion">
+      <button data-v="on">开</button><button data-v="off">关</button>
+    </div>
+  </div>
+
+  <div class="tw">
+    <div class="k">缩放</div>
+    <div class="pick" data-tweak="scale">
+      <button data-v="0.72">72%</button><button data-v="0.85">85%</button><button data-v="1">100%</button>
+    </div>
+  </div>
+
+  <div class="tw">
+    <div class="k">口径注释（D1–D7 落点）</div>
+    <div class="pick" data-tweak="notes">
+      <button data-v="on">显示</button><button data-v="off">隐藏</button>
+    </div>
+  </div>
+
+  <hr>
+  <div class="tw foot">
+    <button data-act="reset">恢复示例数据</button>
+    <button data-act="wipe">清空全部</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   0. 常量
+   ============================================================ */
+const CURRENCIES = { CNY:{s:"¥",n:"人民币"}, USD:{s:"$",n:"美元"}, EUR:{s:"€",n:"欧元"} };
+const CAT_PALETTE = ["var(--c1)","var(--c2)","var(--c3)","var(--c4)","var(--c5)","var(--c6)","var(--c7)","var(--c8)"];
+const SAMPLE_SENTENCES = [
+  { say:"午饭花了三十五",       amount:35,    title:"午饭",       cat:"food" },
+  { say:"打车二十八块",         amount:28,    title:"打车",       cat:"transport" },
+  { say:"超市买菜一百二十六块五", amount:126.5, title:"超市买菜",   cat:"shopping" },
+  { say:"咖啡三十二",           amount:32,    title:"咖啡",       cat:"food" },
+  { say:"地铁六块",             amount:6,     title:"地铁",       cat:"transport" },
+];
+
+/* ============================================================
+   1. 状态
+   ============================================================ */
+const baseCategories = () => ([
+  { id:"food",      name:"餐饮",   color:"var(--c1)", system:false },
+  { id:"transport", name:"交通",   color:"var(--c3)", system:false },
+  { id:"shopping",  name:"购物",   color:"var(--c4)", system:false },
+  { id:"housing",   name:"居住",   color:"var(--c2)", system:false },
+  { id:"fun",       name:"娱乐",   color:"var(--c5)", system:false },
+  { id:"other",     name:"其他",   color:"var(--c7)", system:false },
+  { id:"uncat",     name:"未分类", color:"var(--c9)", system:true  },
+]);
+
+/* 示例数据：以「今天」为锚，便于演示月/季/年三档。
+   注意：任何示例记录都不能落在未来——否则它一被打开编辑就会被「时间不能晚于现在」拦下。 */
+function seedRecords(){
+  const now = Date.now();
+  const D = (off, hh, mm) => { const t = new Date(); t.setDate(t.getDate()-off); t.setHours(hh,mm,0,0); return t.getTime(); };
+  const raw = [
+    [0,    32,   "午饭",     "food",      12, 20],
+    [0,    28,   "咖啡",     "food",      15, 40],
+    [0,    6,    "地铁",     "transport", 9,  10],
+    [0,    45,   "电影",     "fun",       20, 30],
+    [1,    126.5,"超市买菜", "shopping",  18, 5 ],
+    [1,    28,   "打车",     "transport", 22, 40],
+    [2,    2600, "房租",     "housing",   10, 0 ],
+    [2,    186,  "水电费",   "housing",   10, 5 ],
+    [3,    68,   "日用品",   "shopping",  16, 20],
+    [3,    25,   "午饭",     "food",      12, 30],
+    [5,    100,  "话费",     "housing",   11, 0 ],
+    [5,    199,  "健身",     "fun",       19, 0 ],
+    [7,    86.4, "买菜",     "shopping",  17, 50],
+    [7,    6,    "地铁",     "transport", 8,  45],
+    [9,    238,  "聚餐",     "fun",       20, 10],
+    [12,   68,   "书",       "shopping",  14, 0 ],
+    [16,   34,   "打车",     "transport", 23, 15],
+    [21,   76,   "医药",     "other",     10, 20],
+    [27,   2600, "房租",     "housing",   10, 0 ],
+    [33,   899,  "家电",     "shopping",  15, 30],
+    [41,   1680, "旅行",     "fun",       9,  0 ],
+    [55,   2600, "房租",     "housing",   10, 0 ],
+    [63,   450,  "家具",     "housing",   14, 40],
+    [78,   520,  "体检",     "other",     9,  30],
+    [95,   1200, "学费",     "other",     16, 0 ],
+  ];
+  return raw.map((r,i) => {
+    let ts = D(r[0], r[4], r[5]);
+    /* 只有「今天」的示例记录可能落在未来：依次往前错开，仍留在今天（跨零点打开时兜底到 00:08 之后） */
+    if(r[0] === 0 && ts > now - 60000){
+      ts = now - 60000 * (12 + i * 47);
+      const dayStart = new Date(); dayStart.setHours(0, 8, 0, 0);
+      if(ts < dayStart.getTime()) ts = dayStart.getTime() + i * 60000;
+    }
+    return { id: "r"+(i+1), amount: r[1], title: r[2], cat: r[3], ts };
+  });
+}
+
+let store = {
+  categories: baseCategories(),
+  records: seedRecords(),
+  currency: "CNY",
+};
+
+let ui = {
+  theme:"light", motion:"on", voiceMode:"confirm", voiceDemo:"normal",
+  notes:"off", scale:1,
+};
+
+/* 每个设备框独立视图 */
+const VIEW_KEYS = ["book","stats","history","settings"];
+let frames = VIEW_KEYS.map((k,i) => ({
+  i, screen:k,
+  settingsStack:["root"],
+  monthCursor:0,          // 历史页月份偏移
+  range:"month",          // 统计页 月/季/年
+  sheet:null,             // 底部表单
+  overlay:null,           // 录音/解析/权限浮层
+  toast:null,
+  parsed:"",              // 识别文本
+  swiped:null,            // 已左滑的记录 id
+  toastTimer:null,
+}));
+
+/* ============================================================
+   2. 工具
+   ============================================================ */
+const $  = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const sym = () => CURRENCIES[store.currency].s;
+const money = n => {
+  const v = Math.round(n*100)/100;
+  return v.toLocaleString("zh-CN",{minimumFractionDigits: v % 1 === 0 ? 0 : 2, maximumFractionDigits:2});
+};
+const catOf = id => store.categories.find(c => c.id === id) || { id:"uncat", name:"未分类", color:"var(--c9)", system:true };
+const pad2 = n => String(n).padStart(2,"0");
+const dayKey = ts => { const d = new Date(ts); return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); };
+const hm = ts => { const d = new Date(ts); return pad2(d.getHours())+":"+pad2(d.getMinutes()); };
+const WEEK = ["周日","周一","周二","周三","周四","周五","周六"];
+const isToday = ts => dayKey(ts) === dayKey(Date.now());
+const isSameMonth = (ts, base) => { const a=new Date(ts), b=new Date(base); return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth(); };
+
+/* 统计区间 */
+function rangeBounds(range){
+  const now = new Date(); now.setHours(23,59,59,999);
+  const end = now.getTime();
+  if(range === "month"){
+    const s = new Date(now.getFullYear(), now.getMonth(), 1, 0,0,0,0);
+    return { start:s.getTime(), end, label: (now.getMonth()+1)+" 月" };
+  }
+  if(range === "quarter"){
+    const q = Math.floor(now.getMonth()/3);
+    const s = new Date(now.getFullYear(), q*3, 1, 0,0,0,0);
+    return { start:s.getTime(), end, label: now.getFullYear()+" Q"+(q+1), quarterStart:q*3 };
+  }
+  const s = new Date(now.getFullYear(), 0, 1, 0,0,0,0);
+  return { start:s.getTime(), end, label: now.getFullYear()+" 年" };
+}
+
+/* 统计分桶：月=按天 / 季=按周 / 年=按月（D3） */
+function buckets(range){
+  const b = rangeBounds(range);
+  const out = [];
+  if(range === "month"){
+    /* 整月铺满：未来日期留空柱，趋势按时间顺序一眼看完（D3 月=按天） */
+    const nowD = new Date(b.end);
+    const daysInMonth = new Date(nowD.getFullYear(), nowD.getMonth()+1, 0).getDate();
+    for(let d=1; d<=daysInMonth; d++){
+      const s = new Date(nowD.getFullYear(), nowD.getMonth(), d, 0,0,0,0).getTime();
+      const e = s + 86400000 - 1;
+      out.push({ label: ((d-1) % 5 === 0) ? String(d) : "", start:s, end:e, sum:0, future: s > b.end });
+    }
+  } else if(range === "quarter"){
+    // 13 周，从季度首日开始
+    for(let w=0; w<13; w++){
+      const s = b.start + w*7*86400000;
+      const e = s + 7*86400000 - 1;
+      if(s > b.end) break;
+      out.push({ label: (w % 3 === 0) ? "W"+(w+1) : "", start:s, end:e, sum:0 });
+    }
+  } else {
+    for(let m=0; m<12; m++){
+      const s = new Date(new Date(b.end).getFullYear(), m, 1, 0,0,0,0).getTime();
+      const e = new Date(new Date(b.end).getFullYear(), m+1, 1, 0,0,0,0).getTime()-1;
+      out.push({ label:(m+1)+"月", start:s, end:e, sum:0, future: s > b.end });
+    }
+  }
+  return out;
+}
+
+function inRangeRecords(range){
+  const b = rangeBounds(range);
+  return store.records.filter(r => r.ts >= b.start && r.ts <= b.end);
+}
+
+/* ============================================================
+   3. 渲染 — 通用块
+   ============================================================ */
+function statusbar(){
+  return `<div class="statusbar">
+    <span>9:41</span><span class="grow"></span>
+    <span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:11px"></i></span>
+    <span style="font-size:11px;margin-left:4px">5G</span>
+    <span class="bat"></span>
+  </div>`;
+}
+/* 尖角指示符：统一用 SVG（文字 ‹ › 在各字号下粗细/基线都不稳定） */
+const CHEV = d => `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d<0?'<path d="M14.6 5.2L7.8 12l6.8 6.8"/>':'<path d="M9.4 5.2L16.2 12l-6.8 6.8"/>'}</svg>`;
+
+/* 底部 Tab 图标：线条图标（几何线稿，非插画），随选中态取色 */
+const TAB_ICONS = {
+  book:'<path d="M4.8 4.6h11.4a2 2 0 0 1 2 2v12.8a2 2 0 0 1-2 2H4.8z"/><path d="M4.8 4.6v16.8"/><path d="M9 9.4h5.6M9 13.2h5.6"/>',
+  stats:'<path d="M3.6 20.2h16.8"/><path d="M6.6 20.2v-6.4M12 20.2V5.2M17.4 20.2v-9.4"/>',
+  history:'<circle cx="12" cy="11.8" r="7.6"/><path d="M12 7.6v4.6l3.1 1.9"/>',
+  settings:'<path d="M3.8 7.2h6.4M14.4 7.2h5.8M3.8 16.8h3.4M11.4 16.8h8.8"/><circle cx="12.2" cy="7.2" r="2.2"/><circle cx="9.2" cy="16.8" r="2.2"/>'
+};
+function tabbar(f){
+  const items = [["book","记账"],["stats","统计"],["history","历史"],["settings","设置"]];
+  return `<nav class="tabbar" role="tablist" aria-label="主导航">` + items.map(([k,n]) =>
+    `<button class="tab" role="tab" aria-selected="${f.screen===k}" data-action="tab" data-tab="${k}" data-on="${f.screen===k?1:0}" aria-label="${n}">
+       <span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TAB_ICONS[k]}</svg></span><span>${n}</span>
+     </button>`).join("") + `</nav>`;
+}
+function note(text){ return ui.notes==="on" ? `<div class="note">${esc(text)}</div>` : ""; }
+
+/* ============================================================
+   4. 渲染 — 各页
+   ============================================================ */
+function recordRow(r, f){
+  const c = catOf(r.cat);
+  const swiped = f.swiped === r.id;
+  return `<li class="row" data-id="${r.id}">
+    <button class="row-del" data-action="del" data-id="${r.id}">删除</button>
+    <div class="row-face" data-row="${r.id}" style="${swiped?"transform:translateX(-76px)":""}">
+      <span class="dot" style="background:${c.color}">${esc(c.name.slice(0,1))}</span>
+      <span class="mid">
+        <span class="tt">${esc(r.title || c.name)}</span>
+        <span class="mm">${c.name} · ${hm(r.ts)}</span>
+      </span>
+      <span class="amt neg">${sym()}${money(r.amount)}</span>
+    </div>
+  </li>`;
+}
+
+function renderBook(f){
+  const now = Date.now();
+  const monthSum = store.records.filter(r => isSameMonth(r.ts, now)).reduce((a,r)=>a+r.amount,0);
+  const today = store.records.filter(r => isToday(r.ts)).sort((a,b)=>b.ts-a.ts);
+  const todaySum = today.reduce((a,r)=>a+r.amount,0);
+  const count = store.records.filter(r => isSameMonth(r.ts, now)).length;
+
+  return `${statusbar()}
+  <div class="nav"><h2>记一笔</h2><span class="sub">${new Date().getMonth()+1} 月 · ${count} 笔</span></div>
+  <div class="scroll" data-screen-label="记账">
+    <div class="hero">
+      <div class="k">本月支出</div>
+      <div class="v"><small>${sym()}</small>${money(monthSum)}</div>
+      <div class="foot">
+        <span>今日 <em>${sym()}${money(todaySum)}</em></span>
+        <span>日均 <em>${sym()}${money(monthSum / Math.max(1,new Date().getDate()))}</em></span>
+      </div>
+    </div>
+
+    ${note("D2 货币只换符号不换算 · D5 仅支出，金额恒正")}
+
+    <div class="entries">
+      <button class="entry voice" data-action="voice-down" data-screen-label="语音输入">
+        <span class="ic"></span>
+        <span><span class="t">按住说话</span><span class="d">松开结束 · 上滑取消</span></span>
+      </button>
+      <button class="entry manual" data-action="manual" data-screen-label="手动输入">
+        <span class="ic"></span>
+        <span><span class="t">手动输入</span><span class="d">金额 · 标题<br>时间 · 分类</span></span>
+      </button>
+    </div>
+
+    ${note("D6 语音结果走预填确认卡，与手动输入复用同一张表单")}
+
+    <div class="sec-head"><h3>今日记录</h3><span class="sum">${today.length} 笔 · ${sym()}${money(todaySum)}</span></div>
+    ${today.length ? `<ul class="list">${today.map(r=>recordRow(r,f)).join("")}</ul>`
+      : `<div class="empty"><div class="big">◇</div><p>今天还没有记录</p><span>按住左边按钮说一句，或手动输入</span></div>`}
+  </div>
+  ${tabbar(f)}`;
+}
+
+function renderStats(f){
+  const rows = inRangeRecords(f.range);
+  const total = rows.reduce((a,r)=>a+r.amount,0);
+  const bs = buckets(f.range);
+  rows.forEach(r => { const b = bs.find(b => r.ts >= b.start && r.ts <= b.end); if(b) b.sum += r.amount; });
+  const max = Math.max(1, ...bs.map(b=>b.sum));
+  const days = Math.max(1, Math.round((rangeBounds(f.range).end - rangeBounds(f.range).start) / 86400000) + 1);
+
+  // 分布（D3：降序，>8 类合并「其他」）
+  const byCat = {};
+  rows.forEach(r => { byCat[r.cat] = (byCat[r.cat]||0) + r.amount; });
+  let dist = Object.entries(byCat).map(([id,v]) => ({...catOf(id), v})).sort((a,b)=>b.v-a.v);
+  let merged = 0;
+  if(dist.length > 8){ merged = dist.slice(7).reduce((a,c)=>a+c.v,0); dist = dist.slice(0,7).concat([{id:"merged",name:"其他分类",color:"var(--c9)",v:merged}]); }
+  const distMax = Math.max(1, ...dist.map(d=>d.v));
+
+  /* 「今天」那根柱：月视图按日序号取，季/年视图取包含今天的桶 */
+  const nowTs = Date.now();
+  const midIdx = bs.findIndex(b => nowTs >= b.start && nowTs <= b.end);
+  const midLabel = midIdx >= 0 ? bs[midIdx].label : "";
+
+  return `${statusbar()}
+  <div class="nav"><h2>统计</h2><span class="sub">${rangeBounds(f.range).label}</span></div>
+  <div class="scroll" data-screen-label="统计">
+    <div class="seg" data-action="range">
+      <button data-v="month" data-on="${f.range==="month"?1:0}">月</button>
+      <button data-v="quarter" data-on="${f.range==="quarter"?1:0}">季度</button>
+      <button data-v="year" data-on="${f.range==="year"?1:0}">年</button>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="k">总支出</div><div class="v">${sym()}${money(total)}</div></div>
+      <div class="kpi"><div class="k">日均</div><div class="v sm">${sym()}${money(total/days)}</div></div>
+      <div class="kpi"><div class="k">笔数</div><div class="v sm">${rows.length}</div></div>
+    </div>
+
+    ${total === 0 ? `<div class="empty"><div class="big">◇</div><p>这段时间没有支出</p><span>换个区间看看，或先去记一笔</span></div>` : `
+    <div class="card">
+      <h4>趋势</h4>
+      <div class="cap">${f.range==="month"?"按天":f.range==="quarter"?"按周":"按月"} · 单位 ${sym()} · 峰值 ${sym()}${money(max)} · 浅灰柱=无支出</div>
+      <div class="chart${bs.length>20?" many":""}">
+        ${bs.map(b=>`<div class="col ${b.future?"future":(b.sum?"":"zero")} ${b.label===midLabel?"mid":""}">
+          <div class="bar" style="height:${Math.max(2, Math.round(b.sum/max*108))}px" title="${sym()}${money(b.sum)}"></div>
+          <div class="x">${b.label}</div>
+        </div>`).join("")}
+      </div>
+    </div>
+
+    <div class="card">
+      <h4>分类分布</h4>
+      <div class="cap">从高到低 · 共 ${dist.length} 个分类 · 首位占 ${total?Math.round(dist[0].v/total*100):0}%</div>
+      <div class="dist">
+        ${dist.map(d=>`<div class="d-row">
+          <span class="name">${esc(d.name)}</span>
+          <span class="track"><span class="fill" style="width:${Math.round(d.v/distMax*100)}%;background:${d.color}"></span></span>
+          <span class="num"><b>${sym()}${money(d.v)}</b><br>${Math.round(d.v/total*100)}%</span>
+        </div>`).join("")}
+      </div>
+      <div class="legend-note">条内同时用长度与数值编码，不单独依赖颜色（色觉障碍可用）。${merged?`已合并 ${dist.length-1} 类以上为「其他分类」。`:""}</div>
+    </div>
+    ${note("D3 月=按天 / 季=按周 / 年=按月；分布图恒降序，超 8 类合并")}`}
+  </div>
+  ${tabbar(f)}`;
+}
+
+function renderHistory(f){
+  const base = new Date(); base.setDate(1); base.setMonth(base.getMonth() + f.monthCursor);
+  const y = base.getFullYear(), m = base.getMonth();
+  const rows = store.records
+    .filter(r => { const d = new Date(r.ts); return d.getFullYear()===y && d.getMonth()===m; })
+    .sort((a,b)=>b.ts-a.ts);
+  const sum = rows.reduce((a,r)=>a+r.amount,0);
+
+  const groups = {};
+  rows.forEach(r => { const k = dayKey(r.ts); (groups[k] = groups[k] || []).push(r); });
+  const keys = Object.keys(groups).sort((a,b)=> a<b?1:-1);
+
+  return `${statusbar()}
+  <div class="nav"><h2>历史</h2><span class="sub">${rows.length} 笔 · ${sym()}${money(sum)}</span></div>
+  <div class="scroll" data-screen-label="历史">
+    <div class="monthnav">
+      <button data-action="month" data-d="-1" aria-label="上个月">${CHEV(-1)}</button>
+      <span class="m">${y} 年 ${m+1} 月</span>
+      <button data-action="month" data-d="1" aria-label="下个月" ${f.monthCursor>=0?"disabled style=opacity:.4":""}>${CHEV(1)}</button>
+    </div>
+    ${keys.length ? keys.map(k=>{
+      const list = groups[k];
+      const dsum = list.reduce((a,r)=>a+r.amount,0);
+      const d = new Date(list[0].ts);
+      const label = isToday(list[0].ts) ? "今天" : `${d.getMonth()+1} 月 ${d.getDate()} 日`;
+      return `<div class="daygroup">
+        <div class="daybar">
+          <span class="d">${label}</span>
+          <span class="w">${WEEK[d.getDay()]}</span>
+          <span class="s">${list.length} 笔 · ${sym()}${money(dsum)}</span>
+        </div>
+        <ul class="list">${list.map(r=>recordRow(r,f)).join("")}</ul>
+      </div>`;
+    }).join("") : `<div class="empty"><div class="big">◇</div><p>这个月没有记录</p><span>换个月份看看</span></div>`}
+  </div>
+  ${tabbar(f)}`;
+}
+
+function renderSettings(f){
+  const stack = f.settingsStack[f.settingsStack.length-1];
+  const body = stack === "categories" ? catManager(f)
+             : stack === "data"       ? dataManager(f)
+             : settingsRoot(f);
+
+  return `${statusbar()}
+  <div class="nav">
+    ${stack==="root" ? `<h2>设置</h2><span class="sub">单机 · iOS 26+</span>`
+                     : `<button class="nav-btn back" data-action="pop" aria-label="返回">${CHEV(-1)}</button>
+                        <h2 style="font-size:20px">${stack==="categories"?"分类管理":"数据管理"}</h2>`}
+  </div>
+  <div class="scroll" data-screen-label="设置-${stack}">${body}</div>
+  ${tabbar(f)}`;
+}
+
+function settingsRoot(f){
+  const catCount = store.categories.filter(c=>!c.system||c.id!=="uncat").length;
+  return `
+  <div class="group">
+    <div class="gh">记账</div>
+    <div class="grow-item stack">
+      <span class="label">货币单位<small>切换只改变显示符号，不做汇率换算</small></span>
+      <div class="pick" data-action="currency">
+        ${Object.entries(CURRENCIES).map(([k,c])=>`<button data-v="${k}" data-on="${store.currency===k?1:0}">${c.s} ${c.n}</button>`).join("")}
+      </div>
+    </div>
+  </div>
+  ${note("D2 单币种显示偏好；多币种记账与汇率换算列 P2，重启条件见方案")}
+
+  <div class="group">
+    <div class="gh">分类</div>
+    <button class="grow-item" data-action="push" data-stack="categories">
+      <span class="label">分类管理<small>新增 · 重命名 · 删除；记录归「未分类」</small></span>
+      <span class="val">${catCount} 个</span><span class="chev">${CHEV(1)}</span>
+    </button>
+  </div>
+  ${note("D4 删除分类 = 软删 + 记录迁移「未分类」，历史不被破坏")}
+
+  <div class="group">
+    <div class="gh">数据</div>
+    <button class="grow-item" data-action="push" data-stack="data">
+      <span class="label">数据管理<small>导出 CSV · 清空所有数据</small></span>
+      <span class="val">${store.records.length} 条</span><span class="chev">${CHEV(1)}</span>
+    </button>
+  </div>
+
+  <div class="group">
+    <div class="gh">关于</div>
+    <div class="grow-item"><span class="label">版本<small>原型 v1 · 示例数据，非真实账单</small></span><span class="val">1.0.0</span></div>
+    <div class="grow-item"><span class="label">语音能力<small>iOS 26+ 端上 SpeechAnalyzer：离线、无配额</small></span><span class="val">离线</span></div>
+  </div>`;
+}
+
+function catManager(f){
+  const counts = {};
+  store.records.forEach(r => counts[r.cat] = (counts[r.cat]||0)+1);
+  return `
+  <div class="group">
+    <div class="gh">分类（${store.categories.length}）</div>
+    ${store.categories.map(c=>`<div class="cat-row">
+      <span class="dot" style="background:${c.color}">${esc(c.name.slice(0,1))}</span>
+      <span class="label" style="flex:1">
+        ${esc(c.name)}
+        <small>${c.system?"系统保留 · 不可删除":(counts[c.id]||0)+" 条记录"}</small>
+      </span>
+      ${c.system ? "" : `<button class="icon-btn" data-action="rename-cat" data-id="${c.id}">改名</button>
+                          <button class="icon-btn danger" data-action="del-cat" data-id="${c.id}">删除</button>`}
+    </div>`).join("")}
+  </div>
+  <button class="btn primary" data-action="add-cat" style="width:100%">＋ 新增分类</button>
+  <div class="notice" style="margin-top:14px">
+    删除分类时，该分类下已有记录不会消失，会统一迁移到「未分类」；「未分类」为系统保留项，不可删除或改名。
+  </div>
+  ${note("D4 三选一里选了「迁移未分类」：不阻塞用户，也不毁历史")}`;
+}
+
+function dataManager(f){
+  return `
+  <div class="group">
+    <div class="gh">导出</div>
+    <button class="grow-item" data-action="export">
+      <span class="label">导出 CSV<small>UTF-8 带 BOM，Excel 打开中文不乱码</small></span>
+      <span class="chev">${CHEV(1)}</span>
+    </button>
+  </div>
+  ${note("架构评审：必须加 BOM，否则 Excel 中文乱码；字段需做引号转义")}
+
+  <div class="group">
+    <div class="gh">危险操作</div>
+    <button class="grow-item danger" data-action="wipe-ask">
+      <span class="label">清空所有数据<small>不可恢复；建议先导出 CSV</small></span>
+      <span class="chev">${CHEV(1)}</span>
+    </button>
+  </div>
+  ${note("D1/P0-11 清空需二次确认，且提示先导出")}
+
+  <div class="group">
+    <div class="gh">存储</div>
+    <div class="grow-item"><span class="label">本机记录</span><span class="val">${store.records.length} 条</span></div>
+    <div class="grow-item"><span class="label">分类</span><span class="val">${store.categories.length} 个</span></div>
+    <div class="grow-item"><span class="label">当前货币</span><span class="val">${CURRENCIES[store.currency].n}</span></div>
+  </div>`;
+}
+
+/* ============================================================
+   5. 浮层 / 表单
+   ============================================================ */
+function renderOverlay(f){
+  if(!f.overlay) return "";
+  if(f.overlay === "recording"){
+    return `<div class="overlay" role="dialog" aria-modal="true">
+      <div class="timer" id="voiceTimer">0:00<small>.0</small></div>
+      <div class="mic ${f.recCancel?"cancel":""}" id="voiceMic"><span class="bar-ic"><i></i><i></i><i></i><i></i><i></i></span></div>
+      <div class="tip" id="voiceHint">${f.recCancel ? "松手取消这一笔" : "正在聆听…说话时不用凑近麦克风"}</div>
+      <div class="hintline">松开发送 · 上滑取消</div>
+    </div>`;
+  }
+  if(f.overlay === "parsing"){
+    return `<div class="overlay loading" role="dialog" aria-modal="true" aria-busy="true">
+      <div class="spinner" role="status" aria-label="正在识别"></div>
+      <div class="tip">正在识别…（设备端，离线可用）</div></div>`;
+  }
+  if(f.overlay === "denied"){
+    return `<div class="overlay" role="dialog" aria-modal="true">
+      <div class="mic" style="background:transparent;border:1.8px solid rgba(255,255,255,.4);animation:none">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg></div>
+      <div class="tip"><b>没有麦克风权限</b><br>语音记账需要「语音识别」与「麦克风」权限</div>
+      <div class="actions" style="width:100%;padding:0 34px">
+        <button class="btn ghost" data-action="close-overlay">改用手动输入</button>
+        <button class="btn primary" data-action="close-overlay">去设置开启</button>
+      </div>
+    </div>`;
+  }
+  return "";
+}
+
+function renderSheet(f){
+  const s = f.sheet;
+  if(!s) return "";
+  if(s.kind === "editor"){
+    return `<div class="scrim" data-action="close-sheet" aria-hidden="true"></div>
+    <div class="sheet" role="dialog" aria-modal="true">
+      <div class="grab"></div>
+      <h3>${s.mode==="voice" ? "确认这笔支出" : (s.editing ? "编辑记录" : "手动记一笔")}</h3>
+      <div class="sub">${s.mode==="voice" ? "识别结果已预填，直接改不对的地方再保存" : "时间默认现在，可改成事后补记"}</div>
+      ${s.heard ? `<div class="heard">识别到：<b>${esc(s.heard)}</b></div>` : ""}
+      ${s.banner ? `<div class="notice">${s.banner}</div>` : ""}
+      ${s.mode==="voice" ? note("D6 预填确认卡：禁止静默入库，一次点按即可修正") : ""}
+
+      <div class="field amount">
+        <label>金额</label>
+        <input id="fAmount" inputmode="decimal" placeholder="0.00" value="${s.amount===""?"":esc(s.amount)}" autocomplete="off">
+        ${s.error ? `<div class="err">${esc(s.error)}</div>` : ""}
+      </div>
+
+      <div class="field">
+        <label>标题（可留空，自动用分类名）</label>
+        <input id="fTitle" placeholder="午饭 / 打车 / 房租…" value="${esc(s.title)}" autocomplete="off">
+      </div>
+
+      <div class="field">
+        <label>时间</label>
+        <input id="fTime" inputmode="numeric" placeholder="MM-DD HH:MM" value="${esc(s.timeText)}" autocomplete="off">
+        <div class="quick" data-action="time-quick">
+          <button data-v="now" data-on="${s.timeQuick==="now"?1:0}">现在</button>
+          <button data-v="y1" data-on="${s.timeQuick==="y1"?1:0}">昨天</button>
+          <button data-v="y2" data-on="${s.timeQuick==="y2"?1:0}">前天</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>分类</label>
+        <div class="chips" data-action="pick-cat">
+          ${store.categories.map(c=>`<button class="chip" data-v="${c.id}" data-on="${s.cat===c.id?1:0}">
+            <span class="sw" style="background:${c.color}"></span>${esc(c.name)}</button>`).join("")}
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn ghost" data-action="close-sheet">取消</button>
+        <button class="btn primary" data-action="save-record">${s.editing?"保存修改":"保存"}</button>
+      </div>
+    </div>`;
+  }
+  if(s.kind === "confirm-wipe"){
+    return `<div class="scrim" data-action="close-sheet" aria-hidden="true"></div>
+    <div class="sheet" role="dialog" aria-modal="true">
+      <div class="grab"></div>
+      <h3 style="color:var(--danger)">清空所有数据？</h3>
+      <div class="sub">将删除本机全部 ${store.records.length} 条记录与自定义分类，<b>此操作不可恢复</b>。</div>
+      <div class="notice">建议先导出 CSV 备份。导出入口在「数据管理 › 导出 CSV」。</div>
+      <div class="actions">
+        <button class="btn ghost" data-action="close-sheet">再想想</button>
+        <button class="btn ghost" data-action="export">先导出 CSV</button>
+        <button class="btn danger" data-action="wipe-do">确认清空</button>
+      </div>
+    </div>`;
+  }
+  if(s.kind === "export"){
+    return `<div class="scrim" data-action="close-sheet" aria-hidden="true"></div>
+    <div class="sheet" role="dialog" aria-modal="true">
+      <div class="grab"></div>
+      <h3>导出 CSV</h3>
+      <div class="sub">共 ${store.records.length} 条 · UTF-8 with BOM · 保存到「文件」或分享</div>
+      <div class="notice" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;white-space:pre-wrap;max-height:180px;overflow:auto">${esc(csvPreview())}</div>
+      ${s.exporting ? `<div class="loading" style="margin-top:10px"><span class="spinner" aria-hidden="true"></span>正在生成 CSV，写入「文件」…</div>` : ""}
+      <div class="actions">
+        <button class="btn ghost" data-action="close-sheet" ${s.exporting?"disabled":""}>取消</button>
+        <button class="btn primary" data-action="export-do" ${s.exporting?"disabled":""}>${s.exporting?"正在生成…":"保存 / 分享"}</button>
+      </div>
+    </div>`;
+  }
+  if(s.kind === "add-cat" || s.kind === "rename-cat"){
+    return `<div class="scrim" data-action="close-sheet" aria-hidden="true"></div>
+    <div class="sheet" role="dialog" aria-modal="true">
+      <div class="grab"></div>
+      <h3>${s.kind==="add-cat"?"新增分类":"重命名分类"}</h3>
+      <div class="sub">分类名 1–6 个字，重复名会被拦下</div>
+      <div class="field">
+        <label>名称</label>
+        <input id="fCat" maxlength="6" placeholder="例如：宠物" value="${esc(s.value||"")}" autocomplete="off">
+        ${s.error ? `<div class="err">${esc(s.error)}</div>` : ""}
+      </div>
+      <div class="actions">
+        <button class="btn ghost" data-action="close-sheet">取消</button>
+        <button class="btn primary" data-action="save-cat">保存</button>
+      </div>
+    </div>`;
+  }
+  return "";
+}
+
+function csvPreview(){
+  const head = "日期,时间,金额,货币,分类,标题";
+  const lines = store.records.slice().sort((a,b)=>b.ts-a.ts).map(r=>{
+    const d = new Date(r.ts);
+    return [ `"${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}"`, `"${hm(r.ts)}"`,
+             r.amount.toFixed(2), CURRENCIES[store.currency].s, `"${catOf(r.cat).name}"`, `"${(r.title||"").replace(/"/g,'""')}"` ].join(",");
+  });
+  return "\uFEFF" + [head].concat(lines).slice(0,14).join("\n") + (lines.length>13 ? "\n…" : "");
+}
+
+function renderToast(f){
+  if(!f.toast) return "";
+  return `<div class="toast" role="status" aria-live="polite">${esc(f.toast.text)}
+    ${f.toast.undo ? `<button class="undo" data-action="undo">撤销</button>` : ""}
+  </div>`;
+}
+
+function renderFrame(f){
+  const inner = f.screen === "book"    ? renderBook(f)
+              : f.screen === "stats"   ? renderStats(f)
+              : f.screen === "history" ? renderHistory(f)
+              :                          renderSettings(f);
+  return inner + renderOverlay(f) + renderSheet(f) + renderToast(f);
+}
+
+/* ============================================================
+   6. 渲染入口
+   ============================================================ */
+function build(){
+  const stage = $("#stage");
+  const labels = { book:"01 记账", stats:"02 统计", history:"03 历史", settings:"04 设置" };
+  stage.innerHTML = frames.map(f => `<div class="frame-wrap">
+    <div class="frame-label"><b>${labels[f.screen]}</b></div>
+    <div class="device" data-frame-index="${f.i}">
+      <div class="dynamic-island"></div>
+      <div class="screen" id="screen-${f.i}"></div>
+    </div>
+  </div>`).join("");
+  paint();
+}
+
+function paint(){
+  frames.forEach(f => {
+    const el = document.getElementById("screen-"+f.i);
+    if(el) el.innerHTML = renderFrame(f);
+  });
+  document.body.dataset.theme = ui.theme;
+  document.body.dataset.motion = ui.motion;
+  document.documentElement.style.setProperty("--scale", ui.scale);
+  syncTweakUI();
+}
+
+function paintFrame(f){
+  const el = document.getElementById("screen-"+f.i);
+  if(el) el.innerHTML = renderFrame(f);
+}
+
+function syncTweakUI(){
+  $$("[data-tweak]").forEach(g => {
+    const key = g.dataset.tweak;
+    g.querySelectorAll("button").forEach(b => {
+      b.dataset.on = String(ui[key]) === b.dataset.v ? "1" : "0";
+    });
+  });
+}
+
+/* ============================================================
+   7. 表单数据同步
+   ============================================================ */
+function syncEditorFromDOM(f){
+  const s = f.sheet; if(!s || s.kind !== "editor") return;
+  const a = $("#fAmount", document.getElementById("screen-"+f.i));
+  const t = $("#fTitle", document.getElementById("screen-"+f.i));
+  const tm = $("#fTime", document.getElementById("screen-"+f.i));
+  if(a) s.amount = a.value.trim();
+  if(t) s.title = t.value;
+  if(tm) s.timeText = tm.value;
+}
+
+function fmtTimeInput(ts){
+  const d = new Date(ts);
+  return `${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+function parseTimeInput(txt){
+  const m = txt.trim().match(/^(\d{1,2})[-/.](\d{1,2})\s+(\d{1,2}):(\d{2})$/);
+  if(!m) return null;
+  const now = new Date();
+  const d = new Date(now.getFullYear(), +m[1]-1, +m[2], +m[3], +m[4], 0, 0);
+  return isNaN(d.getTime()) ? null : d.getTime();
+}
+function openEditor(f, patch){
+  const now = Date.now();
+  f.sheet = Object.assign({
+    kind:"editor", mode:"manual", editing:null,
+    amount:"", title:"", cat: store.categories[0].id,
+    timeQuick:"now", timeText: fmtTimeInput(now),
+    heard:"", banner:"", error:"",
+  }, patch || {});
+  paintFrame(f);
+}
+
+/* ============================================================
+   8. 语音链路
+   ============================================================ */
+let voice = null;
+let voiceTimerId = null;
+let sentIdx = 0;
+
+function startVoice(f){
+  if(ui.voiceDemo === "denied"){ f.overlay = "denied"; paintFrame(f); return; }
+  f.overlay = "recording"; f.recCancel = false; f.recStart = Date.now();
+  paintFrame(f);
+  voiceTimerId = setInterval(() => {
+    const el = document.getElementById("voiceTimer");
+    if(!el) return;
+    const ms = Date.now() - f.recStart;
+    el.innerHTML = `${Math.floor(ms/60000)}:${pad2(Math.floor(ms/1000)%60)}<small>.${Math.floor(ms%1000/100)}</small>`;
+  }, 100);
+}
+
+function endVoice(f, cancelled){
+  clearInterval(voiceTimerId); voiceTimerId = null;
+  const dur = Date.now() - (f.recStart||Date.now());
+  f.overlay = null; f.recStart = null;
+  if(cancelled){ paintFrame(f); toast(f, "已取消，没有记录产生"); return; }
+  if(dur < 350){ paintFrame(f); toast(f, "按住时间太短，请按住再说（防误触）"); return; }
+
+  f.overlay = "parsing"; paintFrame(f);
+  setTimeout(() => {
+    f.overlay = null;
+    if(ui.voiceDemo === "offline"){
+      openEditor(f, { mode:"voice", banner:"无网络，语音识别暂不可用。已保留这次录音的时长，时间已填为现在，改用手动补完即可。", heard:"" });
+      return;
+    }
+    if(ui.voiceDemo === "fail"){
+      openEditor(f, { mode:"voice", banner:"没能识别出金额。录音已保留，可以重听或直接手动补充字段——不会丢数据。", heard:"" });
+      return;
+    }
+    const s = SAMPLE_SENTENCES[sentIdx++ % SAMPLE_SENTENCES.length];
+    if(ui.voiceMode === "instant"){
+      const ts = Date.now();
+      const target = store.records;
+      const rec = { id:"r"+Math.random().toString(36).slice(2,8), amount:s.amount, title:s.title, cat:s.cat, ts };
+      target.push(rec);
+      paint();
+      toast(f, `已按识别结果入账 ${sym()}${money(s.amount)}「${s.title}」`, () => {
+        store.records = store.records.filter(x => x.id !== rec.id); paint();
+      });
+      return;
+    }
+    openEditor(f, { mode:"voice", heard:s.say, amount:String(s.amount), title:s.title, cat:s.cat });
+  }, 900);
+}
+
+function toast(f, text, undoFn){
+  clearTimeout(f.toastTimer);
+  f.toast = { text, undo: !!undoFn, fn: undoFn };
+  paintFrame(f);
+  f.toastTimer = setTimeout(() => { f.toast = null; paintFrame(f); }, undoFn ? 5200 : 2400);
+}
+
+/* ============================================================
+   9. 事件
+   ============================================================ */
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-action]");
+  if(!el) return;
+  const dev = el.closest(".device");
+  const f = dev ? frames[+dev.dataset.frameIndex] : null;
+  const act = el.dataset.action;
+  /* 分段控件/选项组的 data-action 在外层，data-v 在按钮上 */
+  const vBtn = e.target.closest("button[data-v]");
+  const v = vBtn ? vBtn.dataset.v : el.dataset.v;
+
+  /* --- 无框动作（Tweaks） --- */
+  if(act === "reset" || act === "wipe"){
+    if(act === "reset"){ store.categories = baseCategories(); store.records = seedRecords(); toastAll("已恢复示例数据"); }
+    else { store.records = []; store.categories = baseCategories(); toastAll("已清空（原型内可随时恢复）"); }
+    paint(); return;
+  }
+  if(!f) return;
+
+  switch(act){
+    case "tab":
+      f.screen = el.dataset.tab; f.settingsStack = ["root"]; f.swiped = null;
+      paintFrame(f); break;
+
+    case "range":
+      f.range = v; paintFrame(f); break;
+
+    case "month":
+      f.monthCursor = Math.min(0, f.monthCursor + Number(el.dataset.d));
+      paintFrame(f); break;
+
+    case "push":
+      f.settingsStack.push(el.dataset.stack); paintFrame(f); break;
+    case "pop":
+      if(f.settingsStack.length > 1) f.settingsStack.pop(); paintFrame(f); break;
+
+    case "currency":
+      store.currency = v; paint(); break;
+
+    case "manual":
+      openEditor(f, {}); break;
+
+    case "close-sheet":
+      if(f.sheet && f.sheet.kind === "editor") syncEditorFromDOM(f);
+      f.sheet = null; paintFrame(f); break;
+
+    case "close-overlay":
+      f.overlay = null; paintFrame(f); break;
+
+    case "time-quick": {
+      syncEditorFromDOM(f);
+      const base = new Date();
+      f.sheet.timeQuick = v;
+      if(v === "now"){ f.sheet.timeText = fmtTimeInput(base.getTime()); }
+      if(v === "y1"){ base.setDate(base.getDate()-1); f.sheet.timeText = fmtTimeInput(base.getTime()); }
+      if(v === "y2"){ base.setDate(base.getDate()-2); f.sheet.timeText = fmtTimeInput(base.getTime()); }
+      paintFrame(f); break;
+    }
+
+    case "pick-cat":
+      syncEditorFromDOM(f); f.sheet.cat = v; f.sheet.error = ""; paintFrame(f); break;
+
+    case "save-record": {
+      syncEditorFromDOM(f);
+      const s = f.sheet;
+      const amt = Number(String(s.amount).replace(/[^\d.\-]/g, ""));
+      if(!s.amount || isNaN(amt) || amt <= 0){ s.error = "请输入大于 0 的金额"; paintFrame(f); return; }
+      if(amt > 100000000){ s.error = "金额过大，请检查是否多输了 0"; paintFrame(f); return; }
+      const ts = parseTimeInput(s.timeText) ?? Date.now();
+      if(ts > Date.now() + 60000){ s.error = "时间不能晚于现在"; paintFrame(f); return; }
+      if(s.editing){
+        const r = store.records.find(x => x.id === s.editing);
+        if(r){ r.amount = amt; r.title = s.title.trim(); r.cat = s.cat; r.ts = ts; }
+      } else {
+        store.records.push({ id:"r"+Math.random().toString(36).slice(2,8), amount:amt, title:s.title.trim(), cat:s.cat, ts });
+      }
+      f.sheet = null; paint(); toast(f, "已保存"); break;
+    }
+
+    case "del": {
+      const id = el.dataset.id;
+      const idx = store.records.findIndex(r => r.id === id);
+      if(idx < 0) break;
+      const removed = store.records[idx];
+      store.records.splice(idx, 1);
+      f.swiped = null; paint();
+      toast(f, `已删除 ${sym()}${money(removed.amount)}「${removed.title||catOf(removed.cat).name}」`, () => {
+        store.records.splice(idx, 0, removed); paint();
+      });
+      break;
+    }
+
+    case "undo":
+      if(f.toast && f.toast.fn) f.toast.fn();
+      f.toast = null; paint(); break;
+
+    case "save-cat": {
+      const inp = $("#fCat", document.getElementById("screen-"+f.i));
+      const v = (inp ? inp.value : "").trim();
+      const s = f.sheet;
+      if(!v){ s.error = "请填写分类名"; paintFrame(f); return; }
+      if(store.categories.some(c => c.name === v && c.id !== s.id)){ s.error = "已有同名分类"; paintFrame(f); return; }
+      if(s.kind === "add-cat"){
+        store.categories.splice(store.categories.length-1, 0, {
+          id:"c"+Math.random().toString(36).slice(2,7), name:v,
+          color:CAT_PALETTE[store.categories.length % CAT_PALETTE.length], system:false,
+        });
+      } else {
+        const c = store.categories.find(c => c.id === s.id); if(c) c.name = v;
+      }
+      f.sheet = null; paint(); break;
+    }
+
+    case "add-cat":
+      f.sheet = { kind:"add-cat", value:"", error:"" }; paintFrame(f); break;
+    case "rename-cat": {
+      const c = store.categories.find(x => x.id === el.dataset.id);
+      f.sheet = { kind:"rename-cat", id:c.id, value:c.name, error:"" }; paintFrame(f); break;
+    }
+    case "del-cat": {
+      const id = el.dataset.id;
+      const n = store.records.filter(r => r.cat === id).length;
+      store.records.forEach(r => { if(r.cat === id) r.cat = "uncat"; });
+      store.categories = store.categories.filter(c => c.id !== id);
+      paint();
+      toast(f, n ? `分类已删除，${n} 条记录已迁移到「未分类」` : "分类已删除");
+      break;
+    }
+
+    case "export":
+      f.sheet = { kind:"export" }; paintFrame(f); break;
+    case "export-do": {
+      if(f.sheet && f.sheet.exporting) break;      /* 生成中：忽略重复点击 */
+      const n = store.records.length;
+      f.sheet = { kind:"export", exporting:true }; paintFrame(f);
+      setTimeout(() => {
+        f.sheet = null; paintFrame(f);
+        toast(f, `已生成 CSV · ${n} 条记录（原型只做预览，未真实写文件）`);
+      }, 700);
+      break;
+    }
+
+    case "wipe-ask":
+      f.sheet = { kind:"confirm-wipe" }; paintFrame(f); break;
+    case "wipe-do":
+      store.records = []; store.categories = baseCategories();
+      f.sheet = null; f.settingsStack = ["root"]; paint(); toast(f, "已清空全部数据"); break;
+  }
+});
+
+/* 点击记录行 → 编辑 */
+let suppressRowClick = false;
+document.addEventListener("click", e => {
+  const face = e.target.closest("[data-row]");
+  if(!face) return;
+  if(suppressRowClick){ suppressRowClick = false; return; }
+  const dev = face.closest(".device"); if(!dev) return;
+  const f = frames[+dev.dataset.frameIndex];
+  if(f.swiped){ f.swiped = null; paintFrame(f); return; }
+  const r = store.records.find(x => x.id === face.dataset.row);
+  if(!r) return;
+  openEditor(f, { editing:r.id, amount:String(r.amount), title:r.title, cat:r.cat,
+                  timeQuick:null, timeText: fmtTimeInput(r.ts) });
+});
+
+/* 长按录音 */
+document.addEventListener("pointerdown", e => {
+  const el = e.target.closest('[data-action="voice-down"]');
+  if(!el) return;
+  e.preventDefault();
+  const dev = el.closest(".device");
+  const f = frames[+dev.dataset.frameIndex];
+  if(ui.voiceDemo === "denied"){ f.overlay = "denied"; paintFrame(f); return; }
+  voice = { f, startY: e.clientY, cancel:false };
+  startVoice(f);
+});
+document.addEventListener("pointermove", e => {
+  if(!voice) return;
+  const dy = e.clientY - voice.startY;
+  const want = dy < -60;
+  if(want !== voice.cancel){
+    voice.cancel = want;
+    voice.f.recCancel = want;
+    const mic = document.getElementById("voiceMic");
+    const hint = document.getElementById("voiceHint");
+    if(mic) mic.classList.toggle("cancel", want);
+    if(hint) hint.textContent = want ? "松手取消这一笔" : "正在聆听…说话时不用凑近麦克风";
+  }
+});
+document.addEventListener("pointerup", e => {
+  if(!voice) return;
+  const { f, cancel } = voice; voice = null;
+  endVoice(f, cancel);
+});
+document.addEventListener("pointercancel", () => {
+  if(!voice) return;
+  const { f } = voice; voice = null; endVoice(f, true);
+});
+document.addEventListener("contextmenu", e => {
+  if(e.target.closest('[data-action="voice-down"]')) e.preventDefault();
+});
+
+/* 左滑删除 */
+let swipe = null;
+document.addEventListener("pointerdown", e => {
+  const face = e.target.closest("[data-row]");
+  if(!face || e.target.closest("[data-action]")) return;
+  swipe = { face, x:e.clientX, dx:0, moved:false, dev:face.closest(".device") };
+});
+document.addEventListener("pointermove", e => {
+  if(!swipe) return;
+  swipe.dx = e.clientX - swipe.x;
+  if(Math.abs(swipe.dx) > 6){
+    swipe.moved = true;
+    swipe.face.style.transition = "none";
+  }
+  if(swipe.dx < 0) swipe.face.style.transform = `translateX(${Math.max(-76, swipe.dx)}px)`;
+});
+document.addEventListener("pointerup", () => {
+  if(!swipe) return;
+  const { face, dx, moved, dev } = swipe; swipe = null;
+  face.style.transition = "";
+  if(!dev) return;
+  const f = frames[+dev.dataset.frameIndex];
+  if(!moved){ face.style.transform = ""; return; }
+  suppressRowClick = true;                    /* 拖过的这一次不要触发「点开编辑」 */
+  if(dx < -38){ f.swiped = face.dataset.row; }
+  else { f.swiped = null; }
+  paintFrame(f);
+});
+
+/* Tweaks */
+$("#tweakBtn").addEventListener("click", () => {
+  const p = $("#tweakPanel");
+  const open = p.dataset.open === "1" ? "0" : "1";
+  p.dataset.open = open;
+  $("#tweakBtn").setAttribute("aria-expanded", open === "1" ? "true" : "false");
+});
+$("#tweakPanel").addEventListener("click", e => {
+  const b = e.target.closest("button"); if(!b) return;
+  const g = b.closest("[data-tweak]");
+  if(g){
+    const key = g.dataset.tweak;
+    ui[key] = (key === "scale") ? Number(b.dataset.v) : b.dataset.v;
+    paint(); return;
+  }
+  const act = b.dataset.act;
+  if(act === "reset"){ store.categories = baseCategories(); store.records = seedRecords(); paint(); toastAll("已恢复示例数据"); }
+  if(act === "wipe"){ store.records = []; store.categories = baseCategories(); paint(); toastAll("已清空（点「恢复示例数据」可还原）"); }
+});
+function toastAll(text){ frames.forEach(f => toast(f, text)); }
+
+/* 起手 */
+build();
+</script>
+</body>
+</html>

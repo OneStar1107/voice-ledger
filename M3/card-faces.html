@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>默认卡面集 · 8 张 · 零位图纯 CSS · 双模式验收页</title>
+<!--
+  ============================================================================
+  默认卡面集（8 张）· 零位图 · 单文件 · 纯 CSS
+  ----------------------------------------------------------------------------
+  几何 / 纹理 / 色感的出处：
+    jessepollak/card  —  MIT License  —  11,716 ★
+    文件：src/scss/card.scss  /  src/scss/_mixins.scss  /  src/scss/cards/_*.scss
+    https://github.com/jessepollak/card
+  本项目对其做了重配色与合规性改造，逐条列在本文件末尾 <footer> 与
+  M3/提示词包-双模式-记账App-v3.md §4.1。原始作品版权归原作者；
+  MIT 允许修改与再分发，但必须保留本段许可声明。
+  ============================================================================
+  本页用于验收：同一张卡面同时出现在【深色底】与【浅色底】上。
+  页面底部给出的是逐张实测对比度（WCAG 2.x，公式见 v3 §3.2）。
+  ============================================================================
+-->
+<style>
+/* ==========================================================================
+   1. 令牌 · 浅色模式（页面默认）
+   ========================================================================== */
+:root{
+  --pg:        #EFF1F4;   /* L0 页面底 */
+  --pg-2:      #E9ECF1;   /* L0 凹槽 / 分组底 */
+  --surface:   #FFFFFF;   /* L1 卡面 */
+  --surface-2: #F4F6F9;   /* L2 卡内凹入区 */
+  --line:      #E1E5EB;   /* 装饰性描边（无对比度要求） */
+  --line-2:    #EDEFF4;   /* 比卡描边更淡的行分隔 */
+  --line-control:#8A93A0; /* 控件边界（须 ≥3:1） */
+  --ink-1:     #17181A;
+  --ink-2:     #5C616B;
+  --ink-3:     #666B75;
+  --ink-4:     #9AA0AA;   /* 仅禁用态 / 纯装饰，不承载文字 */
+  --accent:    #1B5FD0;   /* 冰川蓝 · 品牌 */
+  --income:    #C4362B;   /* 收入 = 红 */
+  --expense:   #0F7A46;   /* 支出 = 绿 */
+  --sh-card:   0 1px 2px rgba(24,20,14,.06), 0 8px 24px rgba(24,20,14,.07);
+  --sh-float:  0 8px 24px rgba(24,20,14,.12);
+  --glow:      rgba(27,95,208,.18);
+}
+/* ==========================================================================
+   2. 令牌 · 深色模式
+   ========================================================================== */
+[data-mode="dark"]{
+  --pg:        #0B0B0C;
+  --pg-2:      #121214;
+  --surface:   #17181A;
+  --surface-2: #1F2022;
+  --line:      #26272B;
+  --line-2:    #1E1F23;
+  --line-control:#6A6C73;
+  --ink-1:     #F5F6F7;
+  --ink-2:     #A2A4AB;
+  --ink-3:     #85878E;
+  --ink-4:     #5C5E65;
+  --accent:    #7FE3FF;
+  --income:    #FF6F5E;
+  --expense:   #45D07E;
+  --sh-card:   inset 0 1px 0 rgba(255,255,255,.06), 0 1px 2px rgba(0,0,0,.50);
+  --sh-float:  inset 0 1px 0 rgba(255,255,255,.09), 0 16px 34px rgba(0,0,0,.60);
+  --glow:      rgba(127,227,255,.20);
+}
+
+/* ==========================================================================
+   3. 页面骨架
+   ========================================================================== */
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--pg); color:var(--ink-1);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  font-size:14px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  transition:background .2s cubic-bezier(.22,.8,.2,1), color .2s cubic-bezier(.22,.8,.2,1);
+}
+.band{padding:40px 32px 56px}
+.band + .band{border-top:1px solid transparent}
+.band[data-mode="dark"]{ background:#0B0B0C; color:#F5F6F7 }
+.band[data-mode="light"]{ background:#EFF1F4; color:#17181A }
+
+.masthead{max-width:1240px;margin:0 auto 28px}
+.masthead h1{margin:0 0 6px;font-size:22px;font-weight:650;letter-spacing:-.01em}
+.masthead p{margin:0;font-size:13px;color:var(--ink-2);max-width:80ch}
+.band[data-mode="dark"] .masthead p{color:#A2A4AB}
+.band[data-mode="light"] .masthead p{color:#5C616B}
+.masthead code{
+  font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:12px;
+  background:rgba(127,127,127,.14);padding:1px 5px;border-radius:4px;
+}
+.tag{
+  display:inline-block;margin-bottom:10px;padding:3px 9px;border-radius:999px;
+  font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+}
+.band[data-mode="dark"] .tag{background:rgba(127,227,255,.14);color:#7FE3FF}
+.band[data-mode="light"] .tag{background:rgba(27,95,208,.10);color:#1B5FD0}
+
+/* 卡片网格 */
+.grid{
+  max-width:1240px;margin:0 auto;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(374px,1fr));
+  gap:34px 24px;align-items:start;
+}
+.card-slot{min-width:315px;margin:0}
+.face + .meta{margin-top:14px}
+
+/* ==========================================================================
+   4. 卡面本体
+   几何取自 jessepollak/card：$card-width:350px / $card-height:200px
+   宽高比 350:200 = 7:4 = 1.75
+   ========================================================================== */
+.face{
+  position:relative; width:350px; height:200px; border-radius:14px;
+  overflow:hidden; isolation:isolate;
+  padding:0; border:0;
+  background-color:var(--grad-fallback,#2A2F8F);
+  background-image:var(--scrim,none), var(--grad);
+  color:var(--face-ink,#F5F6F7);
+  box-shadow: inset 0 1px 0 var(--edge,rgba(255,255,255,.10)),
+              0 12px 28px rgba(0,0,0,.30);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC",system-ui,sans-serif;
+}
+
+/* 表面处理层：card-texture 的 4 层 repeating-linear + 末层光泽
+   ——层数、角度、步长沿用原配方；alpha 与光泽带位置已被我们改动（见 §4.1） */
+.face::after{
+  content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+  z-index:1;
+  background-image:
+    repeating-linear-gradient(45deg,  var(--t2,rgba(255,255,255,.015)) 0, var(--t2,rgba(255,255,255,.015)) 1px, transparent 1px, transparent 2px),
+    repeating-linear-gradient(135deg, var(--t4,rgba(255,255,255,.025)) 1px, transparent 2px, var(--t3,rgba(255,255,255,.020)) 3px, var(--t2,rgba(255,255,255,.015)) 4px),
+    repeating-linear-gradient(90deg,  var(--t3,rgba(255,255,255,.020)) 0, var(--t3,rgba(255,255,255,.020)) 1px, transparent 1px, transparent 3px),
+    repeating-linear-gradient(210deg, var(--t4,rgba(255,255,255,.025)) 0, var(--t4,rgba(255,255,255,.025)) 1px, transparent 1px, transparent 4px),
+    var(--gloss,linear-gradient(-25deg, transparent 70%, rgba(255,255,255,.18) 84%, transparent 98%));
+}
+/* 冰川蓝主卡不使用纹理（理由与实测见 v3 §4.4 卡 1 备注） */
+.face.no-tex::after{
+  background-image: var(--gloss,linear-gradient(-25deg, transparent 70%, rgba(255,255,255,.18) 84%, transparent 98%));
+}
+
+/* ---- 卡面元素：位置全部取自原配方 ---- */
+.face .logo{                        /* right:5%  top:8%  —— 原 .jp-card-logo 位 */
+  position:absolute; z-index:2; right:5%; top:8%;
+  display:flex; align-items:center; gap:6px;
+  font-size:12px; font-weight:650; letter-spacing:.14em; text-transform:uppercase;
+  opacity:.92;
+}
+.face .logo .mark{                  /* App 图标占位：冰川蓝符号，非券种标识 */
+  width:20px; height:20px; border-radius:6px;
+  background:linear-gradient(140deg,#7FE3FF,#3B6FE0);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45);
+}
+.face .chip{                        /* 50x35 r5 —— 原 $card-shiny 尺寸；正面位置为我们新增 */
+  position:absolute; z-index:2; left:6%; top:21%;
+  width:50px; height:35px; border-radius:5px;
+  background:
+    repeating-linear-gradient(90deg, rgba(0,0,0,.16) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(0deg,  rgba(0,0,0,.16) 0 1px, transparent 1px 9px),
+    linear-gradient(135deg,#E4C87A,#B8933F 52%,#F0DEA6);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55), 0 1px 2px rgba(0,0,0,.28);
+}
+.face .info{                        /* width:80%  left:10%  bottom:30px —— 原 .jp-card-lower */
+  position:absolute; z-index:2; left:10%; bottom:30px; width:80%;
+}
+.face .number{                      /* font-size:24px  margin-bottom:30px —— 原 .jp-card-number */
+  display:block; margin:0 0 30px;
+  font-family:ui-monospace,"SF Mono",Menlo,Consolas,"Bitstream Vera Sans Mono",monospace;
+  font-size:24px; line-height:1; font-weight:600; letter-spacing:.01em;
+  font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1;
+}
+.face .row{display:flex; align-items:flex-end; gap:12px}
+.face .holder{                     /* font-size:20px  uppercase  max-height:45px  width:190px */
+  flex:0 0 auto; width:190px; max-height:45px;
+  font-size:20px; line-height:1.15; font-weight:500;
+  letter-spacing:.10em; text-transform:uppercase;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.face .period{                     /* 原 .jp-card-expiry：右浮，宽 25% */
+  margin-left:auto; width:25%; text-align:right;
+  font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  font-size:16px; line-height:1.2; font-variant-numeric:tabular-nums;
+}
+.face .period i{
+  display:block; font-style:normal; font-size:9px; letter-spacing:.14em;
+  text-transform:uppercase; opacity:.66; margin-bottom:2px;
+}
+.face .note{                       /* 卡面上的语义角标（收入/支出），非原配方元素 */
+  position:absolute; z-index:2; left:10%; top:6%;
+  display:flex; align-items:center; gap:5px;
+  font-size:10px; font-weight:600; letter-spacing:.06em;
+  padding:2px 7px; border-radius:999px;
+}
+
+/* ==========================================================================
+   5. 八张卡面
+   ========================================================================== */
+/* 1 冰川蓝主卡 —— 唯一需要护底 scrim 的卡面 */
+.f1{
+  --grad:linear-gradient(135deg,#7FE3FF 0%,#3B6FE0 14%,#2A2F8F 40%,#1E2270 78%);
+  --grad-fallback:#2A2F8F;
+  --scrim:linear-gradient(0deg, rgba(11,11,12,.62) 0%, rgba(11,11,12,0) 64%);
+  --face-ink:#F5F6F7; --edge:inset 0 1px 0 rgba(255,255,255,.30);
+}
+/* 2 中性石墨 */
+.f2{
+  --grad:linear-gradient(135deg,#34363C 0%,#24262B 50%,#17181A 100%);
+  --grad-fallback:#24262B;
+  --face-ink:#F5F6F7; --edge:rgba(255,255,255,.10);
+}
+/* 3 深青 */
+.f3{
+  --grad:linear-gradient(135deg,#155B57 0%,#0E3B3A 50%,#08211F 100%);
+  --grad-fallback:#0E3B3A;
+  --face-ink:#F5F6F7; --edge:rgba(255,255,255,.10);
+}
+/* 4 冰银 —— 浅色卡面，墨色反相，纹理改用黑 alpha */
+.f4{
+  --grad:linear-gradient(135deg,#F2F6FA 0%,#DCE4EC 50%,#C3CEDA 100%);
+  --grad-fallback:#DCE4EC;
+  --face-ink:#17181A; --edge:#FFFFFF;
+  --t2:rgba(23,24,26,.012); --t3:rgba(23,24,26,.016); --t4:rgba(23,24,26,.020);
+  --gloss:linear-gradient(-25deg, transparent 70%, rgba(255,255,255,.55) 84%, transparent 98%);
+}
+/* 5 暖褐 */
+.f5{
+  --grad:linear-gradient(135deg,#63432F 0%,#3F2A1E 50%,#2A1B14 100%);
+  --grad-fallback:#3F2A1E;
+  --face-ink:#F5F6F7; --edge:rgba(255,255,255,.10);
+}
+/* 6 午夜紫 */
+.f6{
+  --grad:linear-gradient(135deg,#3B2F66 0%,#241A46 50%,#16102B 100%);
+  --grad-fallback:#241A46;
+  --face-ink:#F5F6F7; --edge:rgba(255,255,255,.10);
+}
+/* 7 深海 */
+.f7{
+  --grad:linear-gradient(135deg,#173055 0%,#0E1E3A 50%,#060B16 100%);
+  --grad-fallback:#0E1E3A;
+  --face-ink:#F5F6F7; --edge:rgba(255,255,255,.10);
+}
+/* 8 素瓷 —— 浅色卡面 */
+.f8{
+  --grad:linear-gradient(135deg,#FBF9F6 0%,#EDE9E2 50%,#E3DED5 100%);
+  --grad-fallback:#EDE9E2;
+  --face-ink:#17181A; --edge:inset 0 1px 0 #FFFFFF, 0 0 0 1px rgba(23,24,26,.06);
+  --t2:rgba(23,24,26,.012); --t3:rgba(23,24,26,.016); --t4:rgba(23,24,26,.020);
+  --gloss:linear-gradient(-25deg, transparent 70%, rgba(255,255,255,.55) 84%, transparent 98%);
+}
+/* 浅色底上的冰银/素瓷：顶边比页面底更亮，边界会消失，必须补极淡描边 */
+[data-mode="light"] .f4,
+[data-mode="light"] .f8{ box-shadow:inset 0 1px 0 #FFFFFF, 0 0 0 1px rgba(23,24,26,.07), 0 10px 26px rgba(24,20,14,.10); }
+[data-mode="dark"]  .f4,
+[data-mode="dark"]  .f8{ box-shadow:inset 0 1px 0 #FFFFFF, 0 0 0 1px rgba(23,24,26,.20), 0 12px 28px rgba(0,0,0,.34); }
+
+/* 卡面内的语义角标 */
+.badge-expense{background:var(--expense); color:#FFFFFF}
+[data-mode="dark"] .badge-expense{background:#45D07E; color:#0B0B0C}
+.badge-brand{background:var(--accent); color:#FFFFFF}
+[data-mode="dark"] .badge-brand{background:#7FE3FF; color:#0B0B0C}
+
+/* ==========================================================================
+   6. 卡面背面（原配方背面几何）
+   磁条 top:10% height:20% ；签名条 80%x16% top:40% left:2% ；
+   CVC left:85% top:40% ；$card-shiny 50x35 r5 top:66% left:2%
+   ========================================================================== */
+.face.back .magstripe{
+  position:absolute; z-index:2; left:0; right:0; top:10%; height:20%;
+  background:linear-gradient(#444,#333);
+}
+.face.back .sigstrip{
+  position:absolute; z-index:2; left:2%; top:40%; width:80%; height:16%;
+  border-radius:2px; background:repeating-linear-gradient(0deg,#fff 0 2px,#F2F2F2 2px 4px);
+  display:flex; align-items:center; padding:0 8px;
+  font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  font-size:10px; color:#3A3A3A; letter-spacing:.10em;
+}
+.face.back .cvc{
+  position:absolute; z-index:2; left:85%; top:40%; height:16%;
+  display:flex; align-items:center;
+  font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  font-size:13px; color:var(--face-ink); opacity:.9;
+}
+.face.back .shiny{
+  position:absolute; z-index:2; left:2%; top:66%; width:50px; height:35px; border-radius:5px;
+  background:linear-gradient(135deg,#E4C87A,#B8933F 52%,#F0DEA6);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55);
+}
+.face.back .legal{
+  position:absolute; z-index:2; right:5%; top:66%; width:70%;
+  font-size:9px; line-height:1.45; text-align:right; opacity:.62;
+}
+
+/* ==========================================================================
+   7. 说明文字
+   ========================================================================== */
+.meta{max-width:350px}
+.meta h3{margin:0 0 2px;font-size:13px;font-weight:650;letter-spacing:.01em}
+.meta .spec{
+  margin:0 0 6px; font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  font-size:11px; line-height:1.5; word-break:break-all; opacity:.72;
+}
+.meta dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:1px 10px;font-size:11.5px}
+.meta dt{opacity:.62}
+.meta dd{margin:0;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+.pass{color:#1F8A4C;font-weight:650}
+[data-mode="dark"] .pass{color:#45D07E}
+
+/* ==========================================================================
+   8. 底部：出处与许可
+   ========================================================================== */
+.footer{
+  max-width:1240px;margin:0 auto;padding:32px 0 0;
+  font-size:12px;line-height:1.75;opacity:.78;
+}
+.footer h2{font-size:14px;margin:0 0 10px;letter-spacing:.01em}
+.footer ol{margin:0;padding-left:22px}
+.footer li{margin-bottom:6px}
+.footer code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11.5px}
+
+/* ==========================================================================
+   9. 窄屏：原配方 @media (max-width:450px) 下 .card-wrapper 缩放 0.625
+   ========================================================================== */
+@media (max-width:450px){
+  .band{padding:28px 16px 40px}
+  .grid{grid-template-columns:1fr;gap:30px}
+  .card-slot{height:126px}
+  .face{transform:scale(.625); transform-origin:top left}
+  .meta{max-width:230px}
+}
+</style>
+</head>
+<body>
+
+<!-- ==========================================================================
+     第一区：深色底
+     ========================================================================== -->
+<section class="band" data-mode="dark">
+  <div class="masthead">
+    <span class="tag">Dark · L0 #0B0B0C</span>
+    <h1>默认卡面集 · 8 张 · 深色底</h1>
+    <p>
+      每张卡都是 <strong>零位图、纯 CSS</strong>：一条 <code>linear-gradient</code> 底色 +
+      4 层 <code>repeating-linear-gradient</code> 表面纹理 + 1 层光泽带。
+      几何沿用 <code>jessepollak/card</code>（MIT，11,716★）的 <code>350×200</code>（7:4）、
+      圆角、<code>logo right:5% top:8%</code>、下部信息块
+      <code>width:80% left:10% bottom:30px</code>、卡号等宽 24px / <code>margin-bottom:30px</code>、
+      右侧 25% 有效期、持卡人 20px 大写 <code>width:190px max-height:45px</code>。
+      所有品牌标识与券种色均已移除。
+    </p>
+  </div>
+
+  <div class="grid">
+
+    <!-- 1 冰川蓝主卡 -->
+    <figure class="card-slot">
+      <div class="face f1 no-tex">
+        <span class="chip" aria-hidden="true"></span>
+        <span class="logo"><span class="mark" aria-hidden="true"></span>VoiceLedger</span>
+        <div class="info">
+          <span class="number">-¥ 3,482.60</span>
+          <div class="row">
+            <span class="holder">主账户</span>
+            <span class="period"><i>账期</i>2026.09</span>
+          </div>
+        </div>
+        <span class="note badge-expense">支出</span>
+      </div>
+      <figcaption class="meta">
+        <h3>1 · 冰川蓝主卡 Glacier Blue</h3>
+        <p class="spec">linear-gradient(135deg,#7FE3FF 0%,#3B6FE0 14%,#2A2F8F 40%,#1E2270 78%)</p>
+        <dl>
+          <dt>纹理层</dt><dd>否（唯一不加纹理的一张）</dd>
+          <dt>护底 scrim</dt><dd>是 · rgba(11,11,12,.62) → 透明 64%</dd>
+          <dt>墨色</dt><dd>#F5F6F7</dd>
+          <dt>圆角 / 描边</dt><dd>14px · inset 0 1px 0 rgba(255,255,255,.30)</dd>
+          <dt>文字区最坏对比度</dt><dd class="pass">8.11 : 1 ✓ AA</dd>
+        </dl>
+      </figcaption>
+    </figure>
+
+    <!-- 2 中性石墨 -->
+    <figure class="card-slot">
+      <div class="face f2">
+        <span class="chip" aria-hidden="true"></span>
+        <span class="logo"><span class="mark" aria-hidden="true"></span>VoiceLedger</span>
+        <div class="info">
+          <span class="number">-¥ 1,206.00</span>
+          <div class="row">
+            <span class="holder">日常卡</span>
+            <span class="period"><i>账期</i>2026.09</span>
+          </div>
+        </div>
+      </div>
+      <figcaption class="meta">
+        <h3>2 · 中性石墨 Graphite</h3>
+        <p class="spec">linear-gradient(135deg,#34363C 0%,#24262B 50%,#17181A 100%)</p>
+        <dl>
+          <dt>纹理层</dt><dd>是 · 白 4 层</dd>
+          <dt>护底 scrim</dt><dd>否</dd>
+          <dt>墨色</dt><dd>#F5F6F7</dd>
+          <dt>圆角 / 描边</dt><dd>14px · inset 0 1px 0 rgba(255,255,255,.10)</dd>
+          <dt>文字区最坏对比度</dt><dd class="pass">9.75 : 1 ✓ AA</dd>
+        </dl>
+      </figcaption>
+    </figure>
+
+    <!-- 3 深青 -->
+    <figure class="card-slot">
+      <div class="face f3">
+        <span class="chip" aria-hidden="true"></span>
+        <span class="logo"><span class="mark" aria-hidden="true"></span>VoiceLedger</span>
+        <div class="info">
+          <span class="number">-¥ 588.50</span>
+          <div class="row">
+            <span class="holder">现金</span>
+            <span class="period"><i>账期</i>2026.09</span>
+          </div>
+        </div>
+      </div>
+      <figcaption class="meta">
+        <h3>3 · 深青 Deep Teal</h3>
+        <p class="spec">linear-gradient(135deg,#155B57 0%,#0E3B3A 50%,#08211F 100%)</p>
+        <dl>
+          <dt>纹理层</dt><dd>是 · 白 4 层</dd>
+          <dt>护底 scrim</dt><dd>否</dd>
+          <dt>墨色</dt><dd>#F5F6F7</dd>
+          <dt>圆角 / 描边</dt><dd>14px · inset 0 1px 0 rgba(255,255,255,.10)</dd>
+          <dt>文字区最坏对比度</dt><dd class="pass">7.44 : 1 ✓ AA</dd>
+        </dl>
+      </figcaption>
+    </figure>
+
+    <!-- 4 冰银 -->
+    <figure class="card-slot">
+      <div class="face f4">
+        <span class="chip" aria-hidden="true"></span>
+        <span class="logo"><span class="mark" aria-hidden="true"></span>VoiceLedger</span>
+        <div class="info">
+          <span class="number">-¥ 2,940.00</span>
+          <div class="row">
+            <span class="holder">储蓄账户</span>
+            <span class="period"><i>账期</i>2026.09</span>
+          </div>
+        </div>
+      </div>
+      <figcaption class="meta">
+        <h3>4 · 冰银 Ice Silver</h3>
+        <p class="spec">linear-gradient(135deg,#F2F6FA 0%,#DCE4EC 50%,#C3CEDA 100%)</p>
+        <dl>
+          <dt>纹理层</dt><dd>是 · <strong>黑</strong> 4 层（浅底必须反相）</dd>
+          <dt>护底 scrim</dt><dd>否</dd>
+          <dt>墨色</dt><dd>#17181A（反相）</dd>
+          <dt>圆角 / 描边</dt><dd>14px · inset 0 1px 0 #FFFFFF</dd>
+          <dt>文字区最坏对比度</dt><dd class="pass">10.29 : 1 ✓ AA</dd>
+        </dl>
+      </figcaption>
+    </figure>
+
+    <!-- 5 暖褐 -->
+    <figure class="card-slot">
+      <div class="face f5">
+        <span class="chip" aria-hidden="true"></span>
+        <span class="logo"><span class="mark" aria-hidden="true"></span>VoiceLedger</span>
+        <div class="info">
+          <span class="number">-¥ 762.30</span>
+          <div class="row">
+            <span class="holder">旅行金</span>
+            <span class="period"><i>账期</i>2026.09</span>
+          </div>
+        </div>
+      </div>
+      <figcaption class="meta">
+        <h3>5 · 暖褐 Warm Umber</h3>
+        <p class="spec">linear-gradient(135deg,#63432F 0%,#3F2A1E 50%,#2A1B14 100%)</p>
+        <dl>
+          <dt>纹理层</dt><dd>是 · 白 4 层</dd>
+          <dt>护底 scrim</dt><dd>否</dd>
+          <dt>墨色</dt><dd>#F5F6F7</dd>
+          <dt>圆角 / 描边</dt><dd>14px · inset 0 1px 0 rgba(255,255,255,.10)</dd>
+          <dt>文字区最坏对比度</dt><dd class="pass">8.06 : 1 ✓ AA</dd>
+        </dl>
+      </figcaption>
+    </figure>
+
+    <!-- 6 午夜紫 -->
+    <figure class="card-slot">
+      <div class="face f6">
+        <span class="chip" aria-hidden="true"></span>
+        <span class="logo"><span class="mark" aria-hidden="true"></span>VoiceLedger</span>
+        <div class="info">
+          <span class="number">-¥ 1,104.80</span>
+          <div class="row">
+            <span class="holder">应急金</span>
+            <span class="period"><i>账期</i>2026.09</span>
+          </div>
+        </div>
+      </div>
+      <figcaption class="meta">
+        <h3>6 · 午夜紫 Midnight Violet</h3>
+        <p class="spec">linear-gradient(135deg,#3B2F66 0%,#241A46 50%,#16102B 100%)</p>
+        <dl>
+          <dt>纹理层</dt><dd>是 · 白 4 层</dd>
+          <dt>护底 scrim</dt><dd>否</dd>
+          <dt>墨色</dt><dd>#F5F6F7</dd>
+          <dt>圆角 / 描边</dt><dd>14px · inset 0 1px 0 rgba(255,255,255,.10)</dd>
+          <dt>文字区最坏对比度</dt><dd class="pass">10.08 : 1 ✓ AA</dd>
+        </dl>
+      </figcaption>
+    </figure>
+
+    <!-- 7 深海 -->
+    <figure class="card-slot">
+      <div class="face f7">
+        <span class="chip" aria-hidden="true"></span>
+        <span class="logo"><span class="mark" aria-hidden="true"></span>VoiceLedger</span>
+        <div class="info">
+          <span class="number">-¥ 415.00</span>
+          <div class="row">
+            <span class="holder">备用金</span>
+            <span class="period"><i>账期</i>2026.09</span>
+          </div>
+        </div>
+      </div>
+      <figcaption class="meta">
+        <h3>7 · 深海 Abyss</h3>
+        <p class="spec">linear-gradient(135deg,#173055 0%,#0E1E3A 50%,#060B16 100%)</p>
+        <dl>
+          <dt>纹理层</dt><dd>是 · 白 4 层</dd>
+          <dt>护底 scrim</dt><dd>否</dd>
+          <dt>墨色</dt><dd>#F5F6F7</dd>
+          <dt>圆角 / 描边</dt><dd>14px · inset 0 1px 0 rgba(255,255,255,.10)</dd>
+          <dt>文字区最坏对比度</dt><dd class="pass">10.91 : 1 ✓ AA</dd>
+        </dl>
+      </figcaption>
+    </figure>
+
+    <!-- 8 素瓷 -->
+    <figure class="card-slot">
+      <div class="face f8">
+        <span class="chip" aria-hidden="true"></span>
+        <span class="logo"><span class="mark" aria-hidden="true"></span>VoiceLedger</span>
+        <div class="info">
+          <span class="number">-¥ 6,730.20</span>
+          <div class="row">
+            <span class="holder">家庭账本</span>
+            <span class="period"><i>账期</i>2026.09</span>
+          </div>
+        </div>
+      </div>
+      <figcaption class="meta">
+        <h3>8 · 素瓷 Porcelain</h3>
+        <p class="spec">linear-gradient(135deg,#FBF9F6 0%,#EDE9E2 50%,#E3DED5 100%)</p>
+        <dl>
+          <dt>纹理层</dt><dd>是 · <strong>黑</strong> 4 层</dd>
+          <dt>护底 scrim</dt><dd>否</dd>
+          <dt>墨色</dt><dd>#17181A（反相）</dd>
+          <dt>圆角 / 描边</dt><dd>14px · inset 0 1px 0 #FFFFFF + 1px rgba(23,24,26,.06)</dd>
+          <dt>文字区最坏对比度</dt><dd class="pass">11.93 : 1 ✓ AA</dd>
+        </dl>
+      </figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ==========================================================================
+     第二区：浅色底（同一批卡面，同一份 CSS，只换页面背景）
+     ========================================================================== -->
+<section class="band" data-mode="light">
+  <div class="masthead">
+    <span class="tag">Light · L0 #EFF1F4</span>
+    <h1>默认卡面集 · 8 张 · 浅色底</h1>
+    <p>
+      这是本次验收的关键一屏：<strong>卡面本身一像素未改</strong>，只有页面背景从
+      <code>#0B0B0C</code> 换成 <code>#EFF1F4</code>。
+      8 张卡在两种底色上都必须成立——这正是「卡面是资产、模式是语境」的分界。
+      注意第 4 张（冰银）与第 8 张（素瓷）：它们的亮端比页面底还亮，
+      浅色底上必须靠 <strong>极淡 1px 描边 + 更柔的落影</strong>才立得住，
+      不能靠加粗边框或提高对比硬造层级。
+    </p>
+  </div>
+
+  <div class="grid">
+
+    <figure class="card-slot">
+      <div class="face f1 no-tex">
+        <span class="chip" aria-hidden="true"></span>
+        <span class="logo"><span class="mark" aria-hidden="true"></span>VoiceLedger</span>
+        <div class="info">
+          <span class="number">-¥ 3,482.60</span>
+          <div class="row">
+            <span class="holder">主账户</span>
+            <span class="period"><i>账期</i>2026.09</span>
+          </div>
+        </div>
+        <span class="note badge-expense">支出</span>
+      </div>
+      <figcaption class="meta"><h3>1 · 冰川蓝主卡</h3>
+        <p class="spec">深色底上只需 1 条 scrim 护住下部信息块；浅色底上卡面自身足够暗，边界天然成立。</p>
+      </figcaption>
+    </figure>
+
+    <figure class="card-slot">
+      <div class="face f2">
+        <span class="chip" aria-hidden="true"></span>
+        <span class="logo"><span class="mark" aria-hidden="true"></span>VoiceLedger</span>
+        <div class="info">
+          <span class="number">-¥ 1,206.00</span>
+          <div class="row"><span class="holder">日常卡</span><span class="period"><i>账期</i>2026.09</span></div>
+        </div>
+      </div>
+      <figcaption class="meta"><h3>2 · 中性石墨</h3>
+        <p class="spec">近黑卡面在浅色底上是最强对比的锚点；纹理层肉眼可见度反而提高。</p>
+      </figcaption>
+    </figure>
+
+    <figure class="card-slot">
+      <div class="face f3">
+        <span class="chip" aria-hidden="true"></span>
+        <span class="logo"><span class="mark" aria-hidden="true"></span>VoiceLedger</span>
+        <div class="info">
+          <span class="number">-¥ 588.50</span>
+          <div class="row"><span class="holder">现金</span><span class="period"><i>账期</i>2026.09</span></div>
+        </div>
+      </div>
+      <figcaption class="meta"><h3>3 · 深青</h3>
+        <p class="spec">深青在全站语义里不与「支出绿」争位，它是中性资产色相，不是语义色。</p>
+      </figcaption>
+    </figure>
+
+    <figure class="card-slot">
+      <div class="face f4">
+        <span class="chip" aria-hidden="true"></span>
+        <span class="logo"><span class="mark" aria-hidden="true"></span>VoiceLedger</span>
+        <div class="info">
+          <span class="number">-¥ 2,940.00</span>
+          <div class="row"><span class="holder">储蓄账户</span><span class="period"><i>账期</i>2026.09</span></div>
+        </div>
+      </div>
+      <figcaption class="meta"><h3>4 · 冰银</h3>
+        <p class="spec">亮端 #F2F6FA vs 页面底 #EFF1F4 = 1.04:1，边界几乎为零 —— 必须靠描边 + 落影，不得加粗边框。</p>
+      </figcaption>
+    </figure>
+
+    <figure class="card-slot">
+      <div class="face f5">
+        <span class="chip" aria-hidden="true"></span>
+        <span class="logo"><span class="mark" aria-hidden="true"></span>VoiceLedger</span>
+        <div class="info">
+          <span class="number">-¥ 762.30</span>
+          <div class="row"><span class="holder">旅行金</span><span class="period"><i>账期</i>2026.09</span></div>
+        </div>
+      </div>
+      <figcaption class="meta"><h3>5 · 暖褐</h3>
+        <p class="spec">全站唯一的暖色相卡面；在浅色底上会与暖纸调底争温，浅色模式底已改为中性冷灰 #EFF1F4。</p>
+      </figcaption>
+    </figure>
+
+    <figure class="card-slot">
+      <div class="face f6">
+        <span class="chip" aria-hidden="true"></span>
+        <span class="logo"><span class="mark" aria-hidden="true"></span>VoiceLedger</span>
+        <div class="info">
+          <span class="number">-¥ 1,104.80</span>
+          <div class="row"><span class="holder">应急金</span><span class="period"><i>账期</i>2026.09</span></div>
+        </div>
+      </div>
+      <figcaption class="meta"><h3>6 · 午夜紫</h3>
+        <p class="spec">紫相是除冰川蓝外唯一「冷但非蓝」的色相，用于把资产卡与品牌卡区分开。</p>
+      </figcaption>
+    </figure>
+
+    <figure class="card-slot">
+      <div class="face f7">
+        <span class="chip" aria-hidden="true"></span>
+        <span class="logo"><span class="mark" aria-hidden="true"></span>VoiceLedger</span>
+        <div class="info">
+          <span class="number">-¥ 415.00</span>
+          <div class="row"><span class="holder">备用金</span><span class="period"><i>账期</i>2026.09</span></div>
+        </div>
+      </div>
+      <figcaption class="meta"><h3>7 · 深海</h3>
+        <p class="spec">最暗的一张。与中性石墨的区别在色相（蓝 vs 无彩），不是明度。</p>
+      </figcaption>
+    </figure>
+
+    <figure class="card-slot">
+      <div class="face f8">
+        <span class="chip" aria-hidden="true"></span>
+        <span class="logo"><span class="mark" aria-hidden="true"></span>VoiceLedger</span>
+        <div class="info">
+          <span class="number">-¥ 6,730.20</span>
+          <div class="row"><span class="holder">家庭账本</span><span class="period"><i>账期</i>2026.09</span></div>
+        </div>
+      </div>
+      <figcaption class="meta"><h3>8 · 素瓷</h3>
+        <p class="spec">亮端 #FBF9F6 vs 页面底 #EFF1F4 = 1.08:1 —— 与冰银同病，靠 inset 白高光 + 1px rgba(23,24,26,.06) 描述边界。</p>
+      </figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ==========================================================================
+     第三区：背面（原配方背面几何），同样给深/浅两底
+     ========================================================================== -->
+<section class="band" data-mode="dark">
+  <div class="masthead">
+    <span class="tag">Back · 原配方背面几何</span>
+    <h1>卡面背面 · 深色底</h1>
+    <p>
+      磁条 <code>top:10% height:20% linear-gradient(#444,#333)</code>；
+      签名条 <code>80%×16% top:40% left:2%</code>；CVC <code>left:85% top:40%</code>；
+      <code>$card-shiny</code> 芯片块 <code>50×35 r5 top:66% left:2%</code> —— 全部照抄原配方。
+    </p>
+  </div>
+  <div class="grid">
+    <figure class="card-slot">
+      <div class="face f1 back">
+        <span class="magstripe"></span>
+        <span class="sigstrip">VOICE LEDGER</span>
+        <span class="cvc">•••</span>
+        <span class="shiny"></span>
+        <span class="legal">默认卡面 · 无品牌标识<br>仅用于本 App 内视觉占位</span>
+      </div>
+      <figcaption class="meta"><h3>背面 · 冰川蓝主卡</h3>
+        <p class="spec">背面复用正面同一条渐变；纹理层沿用 4 层白 alpha。</p></figcaption>
+    </figure>
+    <figure class="card-slot">
+      <div class="face f8 back">
+        <span class="magstripe"></span>
+        <span class="sigstrip">VOICE LEDGER</span>
+        <span class="cvc">•••</span>
+        <span class="shiny"></span>
+        <span class="legal">默认卡面 · 无品牌标识<br>仅用于本 App 内视觉占位</span>
+      </div>
+      <figcaption class="meta"><h3>背面 · 素瓷</h3>
+        <p class="spec">浅色背面的墨色与纹理同样反相（黑 alpha + #17181A 墨）。</p></figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="band" data-mode="light">
+  <div class="masthead">
+    <span class="tag">Back · 浅色底</span>
+    <h1>卡面背面 · 浅色底</h1>
+  </div>
+  <div class="grid">
+    <figure class="card-slot">
+      <div class="face f1 back">
+        <span class="magstripe"></span>
+        <span class="sigstrip">VOICE LEDGER</span>
+        <span class="cvc">•••</span>
+        <span class="shiny"></span>
+        <span class="legal">默认卡面 · 无品牌标识<br>仅用于本 App 内视觉占位</span>
+      </div>
+      <figcaption class="meta"><h3>背面 · 冰川蓝主卡</h3>
+        <p class="spec">深色背面在浅色底上边界天然成立，无需额外描边。</p></figcaption>
+    </figure>
+    <figure class="card-slot">
+      <div class="face f8 back">
+        <span class="magstripe"></span>
+        <span class="sigstrip">VOICE LEDGER</span>
+        <span class="cvc">•••</span>
+        <span class="shiny"></span>
+        <span class="legal">默认卡面 · 无品牌标识<br>仅用于本 App 内视觉占位</span>
+      </div>
+      <figcaption class="meta"><h3>背面 · 素瓷</h3>
+        <p class="spec">浅色背面 vs 浅色底 = 必须靠 1px rgba(23,24,26,.07) 描边；磁条成了最可靠的视觉锚。</p></figcaption>
+    </figure>
+  </div>
+
+  <div class="footer">
+    <h2>出处与许可 · jessepollak/card</h2>
+    <p>
+      卡面几何、纹理配方与色感参考自 <strong>jessepollak/card</strong>（MIT License，11,716★，
+      <code>https://github.com/jessepollak/card</code>，文件
+      <code>src/scss/card.scss</code> / <code>src/scss/_mixins.scss</code> / <code>src/scss/cards/_*.scss</code>）。
+      MIT 允许修改与再分发，条件是保留版权与许可声明 —— 本段即该声明。
+      下列为我们相对原配方<b>实际改动</b>的条目：
+    </p>
+    <ol>
+      <li><b>色值全部替换</b>：去掉 visa <code>#191278</code> / mastercard <code>#0061A8</code> /
+        amex <code>#108168</code> / discover <code>#86B8CF</code>+<code>#FF6600</code> 等券种色，
+        改为冰川蓝族 + 中性暗色族 8 条渐变；<b>移除全部品牌标识与 logo 图形</b>，只保留 logo 的占位框
+        （<code>right:5% top:8%</code>）。</li>
+      <li><b>圆角</b>：<code>$card-border-radius:10px</code> → <code>14px</code>
+        （占卡宽 4.0%），与 App 内 <code>--r-m</code> 语言对齐。</li>
+      <li><b>字体</b>：<code>"Bitstream Vera Sans Mono", Consolas</code> →
+        <code>ui-monospace,"SF Mono",Menlo,Consolas,monospace</code>，
+        并强制 <code>font-variant-numeric:tabular-nums</code>（金额必须对齐，见 v3 §1.3）。</li>
+      <li><b>纹理 alpha 减半</b>：原 <code>$b2/.03 $b3/.04 $b4/.05</code> →
+        深色卡 <code>.015/.020/.020/.025</code>（最坏像素累计 .080）、
+        浅色卡 <code>.012/.016/.016/.020</code>（累计 .064），
+        且 <b>浅色卡改用黑 alpha</b>（白纹理在浅底上不可见，还会冲淡近黑墨）。
+        原因：原 alpha 会把深色卡文字区对比度压到 4.5:1 以下。</li>
+      <li><b>光泽带位置 —— 最重要的一条改动</b>：原
+        <code>linear-gradient(-25deg, transparent 50%, rgba(255,255,255,.2) 70%, transparent 90%)</code>
+        的条带落在 <code>t∈[0.50,0.90]</code>，而卡面下部信息块恰好占据
+        <code>t∈[0.089,0.652]</code>（-25deg 轴上的实测区间），两者重叠 —— 在原配方下，
+        光泽会把文字区背景抬亮，实测使冰川卡的白色金额从可用的对比度掉到 <b>约 2.9:1</b>。
+        我们改为 <code>transparent 70% / rgba(255,255,255,.18) 84% / transparent 98%</code>，
+        实测该位置在文字区的 alpha = <b>0.000</b>，光泽只落在左上角。</li>
+      <li><b>新增正面芯片位</b>：原 <code>$card-shiny</code>（50×35 r5）只在<b>背面</b>
+        <code>top:66% left:2%</code>；我们在正面左上新增同尺寸芯片
+        （<code>left:6% top:21%</code>，上移至下部信息块之上以免压住金额），背面原块保留不动。</li>
+      <li><b>停用 4 层 repeating-radial</b>：<code>card-texture($radial-gradient:true)</code> 的
+        4 层同心圆在近黑底上产生摩尔纹，只保留 4 层线性 + 光泽层。</li>
+      <li><b>新增护底 scrim</b>（原配方无）：仅冰川蓝主卡需要，因为它是唯一「渐变亮端伸进文字区」的卡面。</li>
+      <li><b>内容语义重映射</b>：卡号位 → 本月支出金额（等宽 tabular 24px）；
+        「VALID THRU」位 → 账期；持卡人位 → 账户名。骨架与尺寸未变。</li>
+      <li><b>窄屏</b>：<code>@media (max-width:450px)</code> 下沿用原配方的 <code>scale(.625)</code>。</li>
+    </ol>
+    <p style="margin-top:14px">
+      本页与 <code>M3/提示词包-双模式-记账App-v3.md</code> §4 同源；
+      所有对比度数字由 WCAG 2.x 公式 <code>(L_hi+0.05)/(L_lo+0.05)</code> 在 sRGB 相对亮度上算出，
+      采样点为下部信息块 <code>x∈[10%,90%] × y∈[55%,92%]</code> 的 9×7=63 个点，取其中最坏值。
+    </p>
+  </div>
+</section>
+
+</body>
+</html>

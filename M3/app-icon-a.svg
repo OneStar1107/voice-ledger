@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="VoiceLedger 图标 · A 账目柱 + 上行折线">
+  <defs>
+    <linearGradient id="base" x1="0" y1="0" x2="0.72" y2="1">
+      <stop offset="0" stop-color="#7FE3FF"/>
+      <stop offset="0.24" stop-color="#3B6FE0"/>
+      <stop offset="0.62" stop-color="#2A2F8F"/>
+      <stop offset="1" stop-color="#1E2270"/>
+    </linearGradient>
+    <radialGradient id="scrim" cx="0.5" cy="0.55" r="0.68">
+      <stop offset="0" stop-color="#0B0B0C" stop-opacity="0.44"/>
+      <stop offset="0.62" stop-color="#0B0B0C" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#0B0B0C" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.13"/>
+      <stop offset="0.42" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="tl"><rect width="512" height="512"/></clipPath>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#base)"/>
+  <rect width="1024" height="1024" fill="url(#scrim)"/>
+  <g clip-path="url(#tl)"><rect width="512" height="512" fill="url(#sheen)"/></g>
+  <g fill="#FFFFFF">
+    <rect x="286" y="322" width="300" height="34" rx="17"/>
+    <rect x="286" y="404" width="208" height="34" rx="17"/>
+    <rect x="286" y="486" width="116" height="34" rx="17"/>
+  </g>
+  <path d="M286 706 L438 596 L536 660 L742 432" fill="none" stroke="#FFFFFF" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

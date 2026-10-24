@@ -1,0 +1,2227 @@
+<!doctype html>
+<html lang="zh-CN" data-palette="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>语音记账 · iOS 原型 v2 · 双模式</title>
+<style>
+/* ============================================================================
+   记账 App 原型 v2 · 双模式（深色 / 浅色）
+   ----------------------------------------------------------------------------
+   视觉规范：M3/提示词包-双模式-记账App-v3.md
+     §1 浅色反提（材质层级 / 圆角 / 间距 / 文字 4 阶 / 动效 / 唯一强色块配额）
+     §2 双模式令牌表（逐条落地为本文件的 CSS 变量，一个不漏）
+     §3 色语义与用量纪律（冰川蓝=品牌 / 收入=红 / 支出=绿 / 危险=琥珀）
+     §4 默认卡面集（卡面 CSS 与 M3/card-faces.html 同源，一像素不改）
+   功能与交互契约：prototype/记账App原型-v1.html（v1 的功能一个未删）
+   ----------------------------------------------------------------------------
+   主题机制：<html data-palette="dark|light"> 整体换装，只切属性不重建 DOM。
+   默认深色。Tweaks「配色」三档 → 深色 / 浅色 / 跟随系统。
+   ============================================================================ */
+
+/* ==========================================================================
+   1 · 令牌 · 深色（页面默认）
+   ========================================================================== */
+:root{
+  /* —— L0/L1/L2/L3 材质层级（v3 §1.1） —— */
+  --bg:            #0B0B0C;
+  --bg-2:          #121214;
+  --surface:       #17181A;
+  --surface-2:     #1F2022;
+  --surface-3:     #242528;
+  /* —— 线（v3 §2：--line 与 --line-control 必须分开） —— */
+  --line:          #26272B;
+  --line-2:        rgba(255,255,255,.045);
+  --line-control:  #6A6C73;
+  --hair:          rgba(255,255,255,.06);
+  /* —— 文字 3 阶 + 非文本色（v3 §1.4） —— */
+  --ink-1:         #F5F6F7;
+  --ink-2:         #A2A4AB;
+  --ink-3:         #8C8E96;
+  --ink-4:         #5C5E65;
+  /* —— 语义色（v3 §3） —— */
+  --accent:        #7FE3FF;
+  --accent-2:      #3B6FE0;
+  --accent-ink:    #0B0B0C;
+  --income:        #FF6F5E;
+  --income-ink:    #1A0E0B;
+  --expense:       #45D07E;
+  --expense-ink:   #0B0B0C;
+  --warn:          #E8B04B;
+  --warn-ink:      #0B0B0C;
+  /* —— 玻璃与遮罩 —— */
+  --glass-nav:     rgba(36,37,40,.62);
+  --glass-sheet:   rgba(23,24,26,.92);
+  --glass-scrim:   rgba(0,0,0,.56);
+  --glass-blur:    22px;
+  --glass-blur-hi: 28px;
+  --glass-sat:     1.4;
+  /* —— 玻璃卡系统（本轮新增）：大面积磨砂 + 冰面柔光边缘 + 弥散投影 —— */
+  /* 深色玻璃的透度是**算出来的**，不是挑出来的：合成底必须落在 --surface 附近，
+     否则 --ink-3 会从 4.95:1 掉到 4.5:1 边缘（实测 .52 时只剩 4.58:1）。
+     见 .proto-check/glass-contrast.js。 */
+  --glass-card:     rgba(255,255,255,.028);
+  --glass-card-2:   rgba(255,255,255,.048);
+  --glass-rim-2:    rgba(127,227,255,.085);
+  --glass-bloom:    rgba(127,227,255,.05);
+  --glass-blur-card:30px;
+  --amb-a:          rgba(127,227,255,.055);
+  --amb-b:          rgba(59,111,224,.075);
+  --sb-thumb:       rgba(255,255,255,.16);
+  --sb-thumb-hi:    rgba(255,255,255,.30);
+  /* 冰面柔光边缘 + 轻微弥散投影：不再用「0 0 0 1px 纯色环」（那会读成一条颜色包边），
+     边缘改由 .card/.kpi/.group/.rowcard… 的 ::before 渐变环（--rim-edge）画；
+     这里只留一层顶边内高光 + 两层由近到远的弥散投影 + 极淡外发光。 */
+  --sh-glass:       inset 0 1px 0 var(--hair), 0 2px 6px rgba(0,0,0,.30), 0 14px 36px rgba(0,0,0,.30),
+                    0 0 30px var(--glass-bloom);
+  /* 冰面柔光边缘：顶亮 → 冰蓝 → 底部几乎无光（只画 1px，靠 mask 挖空内容区） */
+  --rim-edge:       linear-gradient(180deg, rgba(222,246,255,.34), rgba(127,227,255,.17) 46%, rgba(255,255,255,.03));
+  /* —— 落影（浅色不写 inset 白高光） —— */
+  --sh-card:       inset 0 1px 0 var(--hair), 0 1px 2px rgba(0,0,0,.50);
+  --sh-float:      0 10px 26px rgba(0,0,0,.55);
+  --sh-glow:       0 22px 56px rgba(59,111,224,.32);
+  /* —— 页面壳（非 App 内层级） —— */
+  --shell-bg:      #0E0F11;
+  --shell-bg-2:    #131518;
+  --shell-line:    rgba(255,255,255,.07);
+  --bezel:         #111318;
+  --bezel-2:       #0A0B0D;
+  /* —— 几何 / 动效（v3 §1.2 §1.5，两模式相同） —— */
+  --r-s:10px; --r-m:14px; --r-l:22px; --r-xl:28px; --r-full:999px;
+  --dur:200ms;
+  --ease:cubic-bezier(.2,.8,.2,1);
+  --tap:44px;
+  --scale:.68;
+}
+/* ==========================================================================
+   2 · 令牌 · 浅色（v3 §2 浅色列，逐条对照）
+   ========================================================================== */
+[data-palette="light"]{
+  --bg:            #EFF1F4;
+  --bg-2:          #E9ECF1;
+  --surface:       #FFFFFF;
+  --surface-2:     #F4F6F9;
+  --surface-3:     #E9ECF1;
+  --line:          #E1E5EB;
+  --line-2:        rgba(23,24,26,.045);
+  --line-control:  #8A93A0;
+  --hair:          rgba(23,24,26,.055);
+  --ink-1:         #17181A;
+  --ink-2:         #5C616B;
+  --ink-3:         #5F646E;
+  --ink-4:         #81868F;
+  --accent:        #1B5FD0;
+  --accent-2:      #3B6FE0;
+  --accent-ink:    #FFFFFF;
+  --income:        #C4362B;
+  --income-ink:    #FFFFFF;
+  --expense:       #0C7341;
+  --expense-ink:   #FFFFFF;
+  --warn:          #8A6100;
+  --warn-ink:      #FFFFFF;
+  --glass-nav:     rgba(255,255,255,.78);
+  --glass-sheet:   rgba(255,255,255,.94);
+  --glass-scrim:   rgba(23,24,26,.32);
+  --glass-sat:     1.8;
+  --glass-blur:    22px;
+  --glass-blur-hi: 28px;
+  /* —— 玻璃卡系统（浅色）—— */
+  --glass-card:     rgba(255,255,255,.32);
+  --glass-card-2:   rgba(255,255,255,.24);
+  --glass-rim-2:    rgba(27,95,208,.075);
+  --glass-bloom:    rgba(27,95,208,.055);
+  --glass-blur-card:30px;
+  --amb-a:          rgba(27,95,208,.05);
+  --amb-b:          rgba(122,178,255,.075);
+  --sb-thumb:       rgba(23,24,26,.20);
+  --sb-thumb-hi:    rgba(23,24,26,.34);
+  /* 冷调阴影（原 v3 §1 给的是暖褐 rgba(24,20,14,…)）：浅色调已整体转冷（#EFF1F4 + 冰川蓝），
+     暖褐在 1px 近距投影上会显出一条**淡褐色包边**，与「冰面」冲突 —— 统一改为冷中性 rgba(18,23,32,…)。 */
+  --sh-glass:       0 1px 2px rgba(18,23,32,.045), 0 12px 32px rgba(18,23,32,.075),
+                    0 0 30px var(--glass-bloom);
+  --rim-edge:       linear-gradient(180deg, rgba(255,255,255,.94), rgba(27,95,208,.11) 46%, rgba(255,255,255,.34));
+  /* 浅色取消顶边内高光：面已是 #FFFFFF，物理上加不了光（v3 §1.1 第 3 条） */
+  --sh-card:       0 1px 2px rgba(18,23,32,.05), 0 8px 24px rgba(18,23,32,.06);
+  --sh-float:      0 8px 24px rgba(18,23,32,.12);
+  --sh-glow:       0 18px 44px rgba(27,95,208,.18);
+  --shell-bg:      #EFF1F4;
+  --shell-bg-2:    #E9ECF1;
+  --shell-line:    rgba(23,24,26,.07);
+  --bezel:         #E4E7EC;
+  --bezel-2:       #D8DCE2;
+  --sh-glow:       0 18px 44px rgba(27,95,208,.18);
+}
+
+/* ==========================================================================
+   3 · 基础
+   ========================================================================== */
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background-color:var(--shell-bg);
+  /* 壳层也铺一层极淡环境光，让玻璃卡有可折射的底 */
+  background-image:
+    radial-gradient(1200px 620px at 16% -12%, var(--amb-b), transparent 62%),
+    radial-gradient(1000px 520px at 88% 112%, var(--amb-a), transparent 62%);
+  background-attachment:fixed;
+  color:var(--ink-1);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased; text-wrap:pretty;
+  transition:background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+body[data-motion="off"] *{transition:none !important;animation:none !important}
+@media (prefers-reduced-motion: reduce){ *{animation:none !important;transition:none !important} }
+:focus{outline:none}
+
+/* 浮空细滚动条（页面壳）：轨道透明、滑块内缩成小胶囊，去掉 Windows 的箭头按钮。
+   App 框内（.scroll）仍保持 width:0 —— iOS 本来就不画滚动条，那是「真机感」的一部分。 */
+/* 浮空细滚动条（页面壳）：轨道透明、滑块内缩成小胶囊，去掉 Windows 的箭头按钮。
+   [!] 这里**绝不能**再写 scrollbar-width / scrollbar-color：Chromium 一旦看到这两个标准属性，
+   就会整体忽略 ::-webkit-scrollbar-*（这正是上一版滚动条没换掉、仍带箭头按钮的原因）。
+   App 框内（.scroll）保持 scrollbar-width:none + width:0 —— iOS 本来就不画滚动条。 */
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{
+  background:var(--sb-thumb);border-radius:var(--r-full);
+  border:3px solid transparent;background-clip:padding-box;min-height:56px;
+}
+::-webkit-scrollbar-thumb:hover{background:var(--sb-thumb-hi);border:3px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-button{display:none;width:0;height:0}
+::-webkit-scrollbar-button:vertical:start:increment,
+::-webkit-scrollbar-button:vertical:end:decrement,
+::-webkit-scrollbar-button:horizontal:start:increment,
+::-webkit-scrollbar-button:horizontal:end:decrement{display:none;width:0;height:0}
+::-webkit-scrollbar-corner{background:transparent}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+/* ==========================================================================
+   4 · 舞台 / 顶栏（设备框之外，跟随模式换装）
+   ========================================================================== */
+.topbar{
+  position:sticky; top:0; z-index:50;
+  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  padding:13px 22px;
+  background:var(--shell-bg-2);
+  border-bottom:1px solid var(--shell-line);
+  backdrop-filter:blur(14px);
+}
+.brand{display:flex;align-items:center;gap:10px}
+.brand .mark{
+  width:26px;height:26px;border-radius:8px;flex:none;
+  background:linear-gradient(140deg,#7FE3FF,#3B6FE0);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45);
+}
+.brand h1{font-size:16px;margin:0;font-weight:650;letter-spacing:.2px}
+.chipinfo{
+  font-size:11px;padding:3px 9px;border-radius:var(--r-full);
+  background:var(--surface-2); color:var(--ink-2); border:1px solid var(--line);
+  white-space:nowrap;
+}
+.chipinfo.brand{color:var(--accent);border-color:var(--accent)}
+.hints{display:flex;gap:16px;flex-wrap:wrap;color:var(--ink-2);font-size:12.5px;margin-left:auto}
+.hints b{color:var(--ink-1);font-weight:600}
+
+.stage{
+  display:flex; flex-wrap:wrap; gap:30px 26px;
+  align-items:flex-start; justify-content:center;
+  padding:30px 24px 120px;
+}
+.frame-wrap{position:relative}
+.frame-label{
+  font-size:11.5px;color:var(--ink-3);margin-bottom:9px;
+  letter-spacing:.6px;text-transform:uppercase;text-align:center;
+}
+.frame-label b{color:var(--ink-2);letter-spacing:0;text-transform:none;font-weight:600}
+.device-slot{overflow:visible}
+.device{
+  width:390px;height:844px;border-radius:52px;
+  background:var(--bezel);
+  padding:11px;position:relative;
+  box-shadow:var(--sh-float), 0 0 0 1px var(--shell-line) inset;
+  transform:scale(var(--scale)); transform-origin:top left;
+}
+.device::after{
+  content:"";position:absolute;inset:11px;border-radius:42px;
+  box-shadow:0 0 0 1px rgba(0,0,0,.42) inset;pointer-events:none;z-index:6;
+}
+[data-palette="light"] .device::after{box-shadow:0 0 0 1px rgba(23,24,26,.10) inset}
+/* 灵动岛图形已移除（用户要求）：顶部不要再有这块独立的黑色元素，
+   让屏内背景一路铺到最上面，整体感更强。 */
+.screen{
+  position:relative;width:100%;height:100%;border-radius:42px;
+  background:var(--bg);overflow:hidden;
+  /* 屏内环境光必须铺在 .screen 上（整屏一张连续底），不能挂在 .scroll 上：
+     挂在滚动区会在标题下方留下一道横向硬边界，屏内一眼看出“上下两块”。
+     磨砂玻璃卡也要有东西可折射，否则 backdrop-filter 在纯色底上等于没做。 */
+  background-image:
+    radial-gradient(120% 62% at 8% -6%, var(--amb-a), transparent 60%),
+    radial-gradient(96% 52% at 104% 4%, var(--amb-b), transparent 62%),
+    radial-gradient(110% 60% at 50% 106%, var(--amb-a), transparent 64%);
+  background-repeat:no-repeat;
+  display:flex;flex-direction:column;
+  color:var(--ink-1);
+  transition:background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+
+/* ==========================================================================
+   5 · 屏内骨架
+   ========================================================================== */
+.statusbar{
+  height:54px;flex:none;padding:0 30px 6px 34px;
+  display:flex;align-items:baseline;gap:6px;font-size:13px;font-weight:600;
+}
+.statusbar .grow{flex:1}
+/* 左边「9:41」与右边「5G」按文字基线对齐（原先 flex-end 让两段文字基线差约 2px）；
+   图标是图形、没有文字基线，单独居中。 */
+.statusbar .sig,.statusbar .bat{align-self:center}
+.statusbar .sig{display:flex;gap:2px;align-items:flex-end;height:11px}
+.statusbar .sig i{display:block;width:3px;background:var(--ink-1);border-radius:1px}
+.statusbar .bat{width:22px;height:11px;border:1.4px solid var(--ink-1);border-radius:3px;position:relative;margin-left:4px}
+.statusbar .bat::before{content:"";position:absolute;inset:1.6px;background:var(--ink-1);border-radius:1px}
+.statusbar .bat::after{content:"";position:absolute;right:-3.4px;top:3.4px;width:2px;height:4px;background:var(--ink-1);border-radius:0 1px 1px 0}
+
+.nav{flex:none;padding:2px 18px 10px;display:flex;align-items:baseline;gap:8px;min-height:44px}
+.nav h2{font-size:26px;margin:0;font-weight:700;letter-spacing:-.4px}
+/* 顶部右侧小字与统计页的月份入口共用同一套胶囊语言（用户要求统一） */
+.nav .sub{
+  font-size:12.5px;color:var(--ink-3);margin-left:auto;font-variant-numeric:tabular-nums;
+  border:1px solid var(--line-control);background:var(--surface-2);
+  border-radius:var(--r-full);padding:5px 12px;min-height:30px;
+  display:inline-flex;align-items:center;
+}
+/* 标题与右上角文字按基线对齐；按钮是图形件，单独居中 */
+.nav .sub,.nav .jump{font-variant-numeric:tabular-nums}
+.nav .jump{
+  margin-left:auto;border:1px solid var(--line-control);background:var(--surface-2);color:var(--ink-2);
+  border-radius:var(--r-full);padding:5px 12px;min-height:30px;font-family:inherit;font-size:12.5px;
+  font-weight:600;display:flex;align-items:center;gap:5px;cursor:pointer;
+}
+.nav .jump:hover{color:var(--ink-1);background:var(--surface-3)}
+.nav .jump .caret{transition:transform var(--dur) var(--ease)}
+.nav .jump[aria-expanded="true"] .caret{transform:rotate(180deg)}
+.nav-btn{align-self:center}
+.nav-btn{
+  width:44px;height:44px;flex:none;border:0;background:transparent;cursor:pointer;
+  color:var(--accent);display:grid;place-items:center;border-radius:var(--r-full);
+}
+.nav-btn:hover{background:var(--surface-2)}
+.nav-btn.back{color:var(--ink-2)}
+
+/* 滚动区：底部留出悬浮导航的空位，内容永远不会被药丸压住。
+   背景刻意留空 —— 环境光已上移到 .screen，整屏一张连续底，滚动时也不跟着动。 */
+.scroll{
+  flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;
+  padding:0 18px 118px;scrollbar-width:none;
+}
+.scroll::-webkit-scrollbar{width:0}
+
+/* ==========================================================================
+   6 · L3 悬浮毛玻璃胶囊导航（v3 §1.1 / §2）
+   ========================================================================== */
+.tabbar{
+  position:absolute;left:16px;right:16px;bottom:20px;z-index:15;
+  display:flex;gap:2px;padding:6px;border-radius:var(--r-full);
+  background:var(--glass-nav);
+  backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat));
+  box-shadow:var(--sh-float), 0 0 0 1px var(--hair) inset;
+  transition:background var(--dur) var(--ease), backdrop-filter var(--dur) var(--ease);
+}
+.tab{
+  flex:1;border:0;background:transparent;cursor:pointer;font-family:inherit;
+  color:var(--ink-3);font-size:10.5px;letter-spacing:.01em;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  min-height:52px;border-radius:var(--r-full);
+  transition:color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.tab .glyph,.tab .glyph svg{width:23px;height:23px;display:block}
+.tab[data-on="1"]{color:var(--accent);font-weight:650;background:var(--surface-3)}
+.tab:hover{color:var(--ink-2)}
+
+/* ==========================================================================
+   7 · 记账页
+   ========================================================================== */
+/* 7.1 资产卡（v3 §4 卡面，卡面层样式与 card-faces.html 同源，一像素不改） */
+.asset{position:relative;width:100%;height:196px;margin:2px 0 20px}
+
+/* —— 卡面本体（jessepollak/card 几何，MIT） —— */
+.face{
+  position:relative;width:350px;height:200px;border-radius:14px;
+  overflow:hidden;isolation:isolate;padding:0;border:0;
+  background-color:var(--grad-fallback,#2A2F8F);
+  background-image:var(--scrim,none), var(--grad);
+  color:var(--face-ink,#F5F6F7);
+  box-shadow:inset 0 1px 0 var(--edge,rgba(255,255,255,.10)), 0 12px 28px rgba(0,0,0,.30);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC",system-ui,sans-serif;
+  transform:scale(.974); transform-origin:top left;
+}
+.face::after{
+  content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:1;
+  background-image:
+    repeating-linear-gradient(45deg,  var(--t2,rgba(255,255,255,.015)) 0, var(--t2,rgba(255,255,255,.015)) 1px, transparent 1px, transparent 2px),
+    repeating-linear-gradient(135deg, var(--t4,rgba(255,255,255,.025)) 1px, transparent 2px, var(--t3,rgba(255,255,255,.020)) 3px, var(--t2,rgba(255,255,255,.015)) 4px),
+    repeating-linear-gradient(90deg,  var(--t3,rgba(255,255,255,.020)) 0, var(--t3,rgba(255,255,255,.020)) 1px, transparent 1px, transparent 3px),
+    repeating-linear-gradient(210deg, var(--t4,rgba(255,255,255,.025)) 0, var(--t4,rgba(255,255,255,.025)) 1px, transparent 1px, transparent 4px),
+    var(--gloss,linear-gradient(-25deg, transparent 70%, rgba(255,255,255,.18) 84%, transparent 98%));
+}
+.face.no-tex::after{
+  background-image:var(--gloss,linear-gradient(-25deg, transparent 70%, rgba(255,255,255,.18) 84%, transparent 98%));
+}
+.face .logo{
+  position:absolute;z-index:2;right:5%;top:8%;
+  display:flex;align-items:center;gap:6px;
+  font-size:12px;font-weight:650;letter-spacing:.14em;text-transform:uppercase;opacity:.92;
+}
+.face .logo .mark{
+  width:20px;height:20px;border-radius:6px;
+  background:linear-gradient(140deg,#7FE3FF,#3B6FE0);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45);
+}
+.face .chip{
+  position:absolute;z-index:2;left:6%;top:14%;width:50px;height:35px;border-radius:5px;
+  background:    repeating-linear-gradient(90deg, rgba(0,0,0,.16) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(0deg,  rgba(0,0,0,.16) 0 1px, transparent 1px 9px),
+    linear-gradient(135deg,#E4C87A,#B8933F 52%,#F0DEA6);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55), 0 1px 2px rgba(0,0,0,.28);
+}
+.face .info{position:absolute;z-index:2;left:10%;bottom:22px;width:80%}
+/* 记账页的资产卡就是本页 hero：卡面大数字 : 小标签 = 44px : 10.5px ≈ 4.2:1（§7.2 的头号字号律，
+   参考图里 "Balance $149.51" 就是这个关系）。标签放 .info 里、数字上方，不再做成角标胶囊——
+   既避免与芯片抢位，也避免在卡面上叠出第二个强色块。 */
+.face .info .lbl{
+  display:block;margin:0 0 5px;
+  font-size:10.5px;font-weight:600;letter-spacing:.06em;opacity:.72;
+}
+.face .number{
+  display:block;margin:0 0 12px;
+  font-family:ui-monospace,"SF Mono",Menlo,Consolas,"Bitstream Vera Sans Mono",monospace;
+  font-size:44px;line-height:1;font-weight:600;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;
+}
+.face .row{display:flex;align-items:flex-end;gap:12px}
+.face .holder{
+  flex:0 0 auto;width:190px;max-height:45px;
+  font-size:20px;line-height:1.15;font-weight:500;
+  letter-spacing:.10em;text-transform:uppercase;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.face .period{
+  margin-left:auto;width:25%;text-align:right;
+  font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  font-size:16px;line-height:1.2;font-variant-numeric:tabular-nums;
+}
+.face .period i{
+  display:block;font-style:normal;font-size:9px;letter-spacing:.14em;
+  text-transform:uppercase;opacity:.66;margin-bottom:2px;
+}
+/* .face .note（卡面左上角标胶囊）已移除：它会在卡面上叠出第二个强色块、并压住芯片。
+   标签改由 .face .info .lbl 承担。 */
+/* —— 八张默认卡面（v3 §4.1 全表） —— */
+.f1{--grad:linear-gradient(135deg,#7FE3FF 0%,#3B6FE0 14%,#2A2F8F 40%,#1E2270 78%);--grad-fallback:#2A2F8F;
+    --scrim:linear-gradient(0deg, rgba(11,11,12,.62) 0%, rgba(11,11,12,0) 64%);
+    --face-ink:#F5F6F7; --edge:inset 0 1px 0 rgba(255,255,255,.30)}
+.f2{--grad:linear-gradient(135deg,#34363C 0%,#24262B 50%,#17181A 100%);--grad-fallback:#24262B;
+    --face-ink:#F5F6F7; --edge:rgba(255,255,255,.10)}
+.f3{--grad:linear-gradient(135deg,#155B57 0%,#0E3B3A 50%,#08211F 100%);--grad-fallback:#0E3B3A;
+    --face-ink:#F5F6F7; --edge:rgba(255,255,255,.10)}
+.f4{--grad:linear-gradient(135deg,#F2F6FA 0%,#DCE4EC 50%,#C3CEDA 100%);--grad-fallback:#DCE4EC;
+    --face-ink:#17181A; --edge:#FFFFFF;
+    --t2:rgba(23,24,26,.012); --t3:rgba(23,24,26,.016); --t4:rgba(23,24,26,.020);
+    --gloss:linear-gradient(-25deg, transparent 70%, rgba(255,255,255,.55) 84%, transparent 98%)}
+.f5{--grad:linear-gradient(135deg,#63432F 0%,#3F2A1E 50%,#2A1B14 100%);--grad-fallback:#3F2A1E;
+    --face-ink:#F5F6F7; --edge:rgba(255,255,255,.10)}
+.f6{--grad:linear-gradient(135deg,#3B2F66 0%,#241A46 50%,#16102B 100%);--grad-fallback:#241A46;
+    --face-ink:#F5F6F7; --edge:rgba(255,255,255,.10)}
+.f7{--grad:linear-gradient(135deg,#173055 0%,#0E1E3A 50%,#060B16 100%);--grad-fallback:#0E1E3A;
+    --face-ink:#F5F6F7; --edge:rgba(255,255,255,.10)}
+.f8{--grad:linear-gradient(135deg,#FBF9F6 0%,#EDE9E2 50%,#E3DED5 100%);--grad-fallback:#EDE9E2;
+    --face-ink:#17181A; --edge:inset 0 1px 0 #FFFFFF, 0 0 0 1px rgba(23,24,26,.06);
+    --t2:rgba(23,24,26,.012); --t3:rgba(23,24,26,.016); --t4:rgba(23,24,26,.020);
+    --gloss:linear-gradient(-25deg, transparent 70%, rgba(255,255,255,.55) 84%, transparent 98%)}
+[data-palette="light"] .face.f4,
+[data-palette="light"] .face.f8{box-shadow:inset 0 1px 0 #FFFFFF, 0 0 0 1px rgba(23,24,26,.07), 0 10px 26px rgba(24,20,14,.10)}
+[data-palette="dark"] .face.f4,
+[data-palette="dark"] .face.f8{box-shadow:inset 0 1px 0 #FFFFFF, 0 0 0 1px rgba(23,24,26,.20), 0 12px 28px rgba(0,0,0,.34)}
+
+/* 7.2 次级统计条（真实数字，不是说明文案）
+   本月合计已经由上方资产卡承担 hero，这里绝不重复它——只放「今天 / 日均」两个卡面放不下的数。 */
+.substats{display:flex;align-items:baseline;gap:26px;margin:0 2px 18px;padding:0 2px}
+.substats .st{display:flex;align-items:baseline;gap:7px}
+.substats .st i{font-style:normal;font-size:10.5px;color:var(--ink-3);letter-spacing:.02em}
+.substats .st b{
+  font-size:15px;font-weight:650;letter-spacing:-.01em;color:var(--ink-1);
+  font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;
+}
+.substats .st b small{font-size:10.5px;font-weight:600;color:var(--ink-2);margin-right:1px}
+
+/* 7.3 行卡：L1 卡片面 + 1px 内描边 --hair + 落影 --sh-card */
+.rows{display:flex;flex-direction:column;gap:16px;margin-bottom:20px}
+.rowcard{
+  position:relative;display:flex;align-items:center;gap:12px;width:100%;
+  background:var(--glass-card);border:0;border-radius:var(--r-full);
+  backdrop-filter:blur(var(--glass-blur-card)) saturate(var(--glass-sat));
+  box-shadow:var(--sh-glass);
+  padding:18px 20px;min-height:var(--tap);
+  cursor:pointer;font-family:inherit;text-align:left;color:inherit;
+  transition:transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.rowcard:active{transform:scale(.985)}
+[data-palette="light"] .rowcard:not(.voice):active{
+  background:var(--surface-2);
+  box-shadow:0 1px 2px rgba(18,23,32,.05), 0 2px 8px rgba(18,23,32,.06), 0 0 0 1px var(--hair);
+}
+.rowcard .base{
+  width:34px;height:34px;flex:none;border-radius:var(--r-full);
+  background:var(--surface-2);color:var(--ink-1);
+  display:grid;place-items:center;
+  box-shadow:inset 0 0 0 1px var(--line-2);
+}
+.rowcard .base svg{width:18px;height:18px;display:block}
+/* 语音是这个 App 的核心动作：在列表语言里它必须是**唯一的主导 CTA**
+   （参考图那条填充胶囊 "Set Category Targets" 就是同一个逻辑）。
+   用 --ink-1/--bg 反相填充而不是品牌蓝：既拿到两种模式下最高的对比度，
+   又不与「唯一强色块=资产卡」的配额约束打架。 */
+.rowcard.voice{
+  background:var(--ink-1);color:var(--bg);
+  min-height:72px;padding:20px;
+  box-shadow:var(--sh-card), 0 0 0 1px var(--ink-1);
+}
+.rowcard.voice .base{background:transparent;color:inherit;box-shadow:inset 0 0 0 1px currentColor}
+.rowcard.voice .tt{color:inherit}
+.rowcard.voice .dd{color:inherit;opacity:.74}
+.rowcard.voice .go{color:inherit;opacity:.85}
+/* 浅色下语音行是近黑填充，而浅色 --rim-edge 走白色 → 在那块黑底上会显成一圈灰白硬边
+   （用户报的「浅色模型下语音胶囊周围一圈黑色边框」）。这行不用描边，靠弥散投影分层。 */
+[data-palette="light"] .rowcard.voice::before{display:none}
+.rowcard .tx{flex:1;min-width:0}
+.rowcard .tt{display:block;font-size:16.5px;font-weight:650;letter-spacing:-.2px;color:var(--ink-1)}
+.rowcard .dd{display:block;font-size:11.5px;color:var(--ink-3);margin-top:3px;line-height:1.45}
+.rowcard .go{color:var(--ink-3);display:flex;align-items:center;flex:none}
+.rowcard .go svg{width:17px;height:17px}
+
+/* ==========================================================================
+   8 · 记录列表（L1 卡片面 + 卡内行分隔 --line-2）
+   ========================================================================== */
+.sec-head{display:flex;align-items:baseline;gap:8px;margin:4px 2px 10px}
+.sec-head h3{font-size:14px;margin:0;font-weight:650}
+.sec-head .sum{font-size:12px;color:var(--ink-3);margin-left:auto;font-variant-numeric:tabular-nums}
+.list{list-style:none;margin:0;padding:0}
+/* [!] 琥珀“滑出车道”只在**已滑开**时画（.item.swiped），且必须画在 .item 上、不能让
+   .item-face 盖着它：两层圆角的抗锯齿对不齐，会沿边缘漏出 1px 月牙 —— 深色下就是用户圈出的
+   那条**金色包边**。静止态整行没有任何琥珀，所以根本没机会漏；滑开时 face 已左移 76px，
+   车道区域上方没有 face，琥珀由 .item 自己的圆角裁剪，边缘干净。 */
+.item{position:relative;overflow:hidden;border-radius:var(--r-full);margin-bottom:8px}
+/* 左滑删除车道：用户指定冰川蓝（原为琥珀警告色）。危险语义改由垃圾桶形状 + 文案承担。 */
+.item.swiped{background:var(--accent)}
+.item-del{
+  position:absolute;inset:0 0 0 auto;width:76px;border:0;cursor:pointer;font-family:inherit;
+  background:transparent;color:var(--accent-ink);font-size:12.5px;font-weight:650;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+}
+.item-del svg{width:17px;height:17px;display:block}
+/* 滑动行卡为什么不做 backdrop-filter：这层底下藏着 76px 的琥珀删除车道，
+   真磨砂会把琥珀透上来（右侧正是金额所在），整行发脏。改用「不透明白面 + 与玻璃同款的中性膜」
+   —— 观感与磨砂行卡同族，但物理上不透底。 */
+.item-face{
+  position:relative;z-index:1;
+  background:linear-gradient(var(--glass-card),var(--glass-card)), var(--surface);
+  border-radius:var(--r-full);
+  box-shadow:var(--sh-glass);
+  padding:12px 14px;display:flex;align-items:center;gap:12px;
+  transition:transform 220ms var(--ease);touch-action:pan-y;
+}
+.item-face:hover{background:var(--surface-2)}
+.dot{width:34px;height:34px;border-radius:var(--r-full);flex:none;display:grid;place-items:center;color:var(--ink-1);font-size:12px;font-weight:700}
+.item .mid{flex:1;min-width:0}
+.item .mid .tt{font-size:14.5px;font-weight:560;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink-1)}
+.item .mid .mm{font-size:11.5px;color:var(--ink-3);margin-top:2px;font-variant-numeric:tabular-nums}
+.item .amt{font-size:15.5px;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.2px;white-space:nowrap}
+/* 支出 = 绿（页面主角）；符号 − 是冗余通道（§3 纪律 5），不只靠颜色区分 */
+.item .amt.neg{color:var(--expense)}
+.item .amt.neg::before{content:"−";opacity:.62;margin-right:1px}
+
+/* 空状态：线条图形，不承载文字的颜色只用 --ink-4 */
+.empty{
+  text-align:center;padding:34px 20px;border-radius:var(--r-l);
+  background:var(--surface);box-shadow:var(--sh-card), 0 0 0 1px var(--hair);
+}
+.empty .glyph{display:block;margin:0 auto 12px;color:var(--ink-4)}
+.empty .glyph svg{width:44px;height:44px;display:block;margin:0 auto}
+.empty p{margin:0 0 4px;font-size:13.5px;color:var(--ink-2)}
+.empty span{font-size:12px;color:var(--ink-3)}
+
+.daygroup{margin-bottom:16px}
+.daybar{
+  display:flex;align-items:baseline;gap:8px;padding:6px 2px 8px;
+  position:sticky;top:0;background:var(--bg);z-index:2;
+}
+.daybar .d{font-size:13.5px;font-weight:650}
+.daybar .w{font-size:11.5px;color:var(--ink-3)}
+.daybar .s{margin-left:auto;font-size:12.5px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+
+/* ==========================================================================
+   9 · 统计页
+   ========================================================================== */
+/* 胶囊筛选条：外层凹入面 + 选中胶囊（深色=白胶囊擦入，浅色=白胶囊 + 落影 + 品牌描边） */
+.seg{display:flex;background:var(--glass-card-2);border-radius:var(--r-full);padding:4px;margin:0 0 16px;box-shadow:inset 0 0 0 1px var(--line-2);backdrop-filter:blur(var(--glass-blur-card)) saturate(var(--glass-sat))}
+.seg button{
+  position:relative;
+  flex:1;border:0;background:transparent;cursor:pointer;font-family:inherit;
+  font-size:13.5px;color:var(--ink-2);border-radius:var(--r-full);min-height:var(--tap);
+  display:flex;align-items:center;justify-content:center;
+  transition:background var(--dur) var(--ease), color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.seg button[data-on="1"]{
+  background:var(--surface);color:var(--ink-1);font-weight:650;
+  box-shadow:0 1px 2px rgba(0,0,0,.28), 0 0 0 1px var(--hair);
+}
+[data-palette="light"] .seg button[data-on="1"]{
+  background:var(--surface);color:var(--ink-1);
+  /* 选中态不再用 1px 品牌蓝硬环（那也是「颜色包边」），改为淡蓝内晕 + 弥散投影 */
+  box-shadow:0 1px 2px rgba(18,23,32,.07), 0 6px 16px rgba(18,23,32,.08), inset 0 0 0 1.5px rgba(27,95,208,.18);
+}
+.seg button:hover{color:var(--ink-1)}
+
+.kpis{display:grid;grid-template-columns:1.35fr 1fr 1fr;gap:8px;margin-bottom:16px}
+.kpi{
+  position:relative;background:var(--glass-card);border-radius:var(--r-m);padding:12px 13px;
+  box-shadow:var(--sh-glass);
+  backdrop-filter:blur(var(--glass-blur-card)) saturate(var(--glass-sat));
+}
+.kpi .k{font-size:10.5px;color:var(--ink-3);white-space:nowrap;letter-spacing:.02em}
+.kpi .v{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.03em;margin-top:4px;white-space:nowrap;color:var(--ink-1)}
+.kpi .v.sm{font-size:15px}
+
+.card{
+  position:relative;background:var(--glass-card);border-radius:var(--r-l);
+  padding:18px 16px 14px;margin-bottom:16px;
+  box-shadow:var(--sh-glass);
+  backdrop-filter:blur(var(--glass-blur-card)) saturate(var(--glass-sat));
+}
+/* 冰面柔光边缘：1px 渐变环（顶亮 → 冰蓝 → 底部收光），用 mask 挖空内容区，不挡任何前景。
+   胶囊族（行卡 / 按钮 / 分段 / 时间快选 / toast）与卡片族共用同一条边缘语言 ——
+   这样「整体性」是靠同一种光，而不是靠同一种描边色。 */
+.card::before,.kpi::before,.group::before,
+.rowcard::before,.pick button::before,.seg button::before,.btn::before,.toast::before{
+  content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:2;
+  /* —— 宿主必须自身 positioned！——
+     inset:0 是相对**最近定位祖先**解析的：若宿主没有 position，
+     伪元素就会铺满祖先的盒子；而这里 border-radius:inherit 拿到的是 999px（胶囊全圆角），
+     于是 332×290 的祖孙盒被画成一个巨大椭圆——它会横跨整个界面，
+     这就是「设置页那条来历不明的圆圈」（2026-10-04 实测定位）。 */
+  padding:1.5px;background:var(--rim-edge);
+  /* 半像素模糊把 1px 硬环变成一圈柔光（「冰面柔光边缘」的关键一步：不是描边，是发光） */
+  filter:blur(.6px);
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor; mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite:exclude;
+}
+.card h4{margin:0 0 2px;font-size:13.5px;font-weight:650}
+.card .cap{font-size:11.5px;color:var(--ink-3);margin-bottom:14px;line-height:1.5}
+
+/* 趋势图：内联 SVG · Y 轴刻度在右 · 极淡虚线网格 · 折线 + 渐变填充 */
+.chart{position:relative;padding:0 46px 0 0}
+.chart .grid{position:absolute;inset:0 46px 0 0;pointer-events:none}
+.chart .grid span{position:absolute;left:0;right:0;border-top:1px dashed var(--ink-4);opacity:.36}
+.chart .yax{
+  position:absolute;right:0;top:0;width:46px;text-align:right;
+  font-size:9.5px;line-height:1;color:var(--ink-3);font-variant-numeric:tabular-nums;
+}
+.chart .yax span{position:absolute;right:0;white-space:nowrap}
+.chart svg{display:block;width:100%;height:132px;overflow:visible}
+.chart .xax{display:flex;margin-top:5px}
+.chart .xax span{
+  flex:1;text-align:center;font-size:9.5px;color:var(--ink-3);
+  font-variant-numeric:tabular-nums;white-space:nowrap;min-width:0;overflow:hidden;
+}
+.chart .xax span.mid{color:var(--ink-1);font-weight:650}
+
+.dist{display:flex;flex-direction:column;gap:11px}
+.dist .d-row{display:grid;grid-template-columns:64px 1fr 74px;align-items:center;gap:10px}
+.dist .name{font-size:12.5px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dist .track{display:block;height:9px;background:var(--surface-2);border-radius:var(--r-full);overflow:hidden}
+.dist .track.exp{background:var(--expense-weak)}
+.dist .fill{display:block;height:100%;min-width:3px;border-radius:var(--r-full);transition:width 300ms var(--ease)}
+.dist .num{font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.dist .num b{color:var(--ink-1);font-weight:650}
+.legend-note{font-size:11px;color:var(--ink-3);margin-top:12px;line-height:1.5}
+
+/* ==========================================================================
+   10 · 历史页
+   ========================================================================== */
+.monthnav{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.monthnav .m{font-size:16px;font-weight:650;font-variant-numeric:tabular-nums;flex:1;text-align:center}
+.monthnav button{
+  width:var(--tap);height:var(--tap);border:1px solid var(--line-control);background:var(--glass-card);
+  border-radius:var(--r-full);cursor:pointer;color:var(--ink-2);font-family:inherit;
+  display:grid;place-items:center;box-shadow:var(--sh-glass);
+  backdrop-filter:blur(var(--glass-blur-card)) saturate(var(--glass-sat));
+}
+.monthnav button:hover{background:var(--surface-2);color:var(--ink-1)}
+.monthnav button:disabled{opacity:.4;cursor:not-allowed}
+
+/* ==========================================================================
+   11 · 设置页
+   ========================================================================== */
+.group{position:relative;background:var(--glass-card);border-radius:var(--r-l);margin-bottom:16px;overflow:hidden;box-shadow:var(--sh-glass);backdrop-filter:blur(var(--glass-blur-card)) saturate(var(--glass-sat))}
+.group > .gh{padding:13px 16px 9px;font-size:11.5px;color:var(--ink-3);letter-spacing:.4px}
+.group-item{display:flex;align-items:center;gap:12px;padding:14px 16px;border-top:1px solid var(--line-2);min-height:54px}
+.group > .group-item:first-child{border-top:0}
+.group-item .label{font-size:14.5px;font-weight:520;flex:1;min-width:0;color:var(--ink-1)}
+.group-item .label small{display:block;font-size:11.5px;color:var(--ink-3);font-weight:400;margin-top:2px;line-height:1.45}
+.group-item .val{font-size:13.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.group-item .chev{color:var(--ink-3);display:flex;align-items:center}
+.group-item .chev svg{width:17px;height:17px}
+button.group-item{width:100%;border:0;background:transparent;cursor:pointer;font-family:inherit;color:inherit;text-align:left}
+button.group-item:hover{background:var(--surface-2)}
+/* 危险/删除：不用红，靠 --warn 琥珀 + 图标形状（v3 §3 用量纪律 4） */
+button.group-item.warn .label{color:var(--warn)}
+button.group-item.warn .lead{color:var(--warn);display:flex;align-items:center;flex:none}
+button.group-item.warn .lead svg{width:18px;height:18px}
+.group-item.stack{flex-direction:column;align-items:stretch;gap:10px;padding-bottom:16px}
+.group-item.stack .label{flex:none}
+.group-item.stack .pick{justify-content:stretch;flex-wrap:nowrap}
+.group-item.stack .pick button{flex:1}
+
+/* 选项卡（货币三选 / 区间三选）：控件边界用 --line-control（≥3:1） */
+.pick{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.pick button{
+  position:relative;
+  border:1px solid var(--line-control);background:var(--surface-2);cursor:pointer;font-family:inherit;
+  font-size:13px;color:var(--ink-2);padding:8px 13px;border-radius:var(--r-full);min-height:var(--tap);
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:background var(--dur) var(--ease), color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.pick button[data-on="1"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:650}
+.pick button:hover{border-color:var(--ink-3)}
+.pick button svg{width:16px;height:16px;display:block}
+
+.cat-row{display:flex;align-items:center;gap:12px;padding:13px 16px;border-top:1px solid var(--line-2)}
+.cat-row:first-child{border-top:0}
+.cat-row .cnt{font-size:11.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.icon-btn{
+  border:1px solid var(--line-control);background:var(--surface-2);border-radius:var(--r-s);
+  min-width:var(--tap);min-height:var(--tap);cursor:pointer;font-family:inherit;font-size:13px;
+  color:var(--ink-2);display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:0 10px;
+}
+.icon-btn svg{width:16px;height:16px;display:block}
+.icon-btn:hover{background:var(--surface-3);color:var(--ink-1)}
+/* 删除分类：琥珀 + 垃圾桶形状，不是红 */
+.icon-btn.warn{color:var(--warn);border-color:var(--warn)}
+
+.notice{background:var(--glass-card-2);border-radius:var(--r-m);padding:12px 13px;font-size:12.5px;color:var(--ink-2);line-height:1.55;box-shadow:inset 0 0 0 1px var(--line-2);backdrop-filter:blur(var(--glass-blur-card)) saturate(var(--glass-sat))}
+.notice.warn{color:var(--warn);box-shadow:inset 0 0 0 1px var(--warn)}
+
+/* ==========================================================================
+   12 · 浮层（录音 / 解析 / 权限）
+   ========================================================================== */
+.overlay{
+  position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:22px;
+  background:var(--glass-sheet);
+  backdrop-filter:blur(var(--glass-blur-hi)) saturate(var(--glass-sat));
+  color:var(--ink-1);animation:fade 180ms var(--ease);
+}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.overlay .tip{font-size:13.5px;color:var(--ink-2);text-align:center;padding:0 40px;line-height:1.55}
+.overlay .timer{
+  font-size:44px;font-weight:300;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+  font-feature-settings:"tnum" 1;color:var(--ink-1);
+}
+.overlay .timer small{font-size:20px;color:var(--ink-3);letter-spacing:0}
+.mic{
+  width:92px;height:92px;border-radius:var(--r-full);background:var(--accent);color:var(--accent-ink);
+  display:grid;place-items:center;position:relative;
+}
+.mic .ring{position:absolute;inset:0;border-radius:inherit;border:1.5px solid var(--accent);animation:waveout 1.8s var(--ease) infinite}
+.mic .ring:nth-child(2){animation-delay:120ms}
+.mic .ring:nth-child(3){animation-delay:240ms}
+@keyframes waveout{0%{transform:scale(1);opacity:.55}100%{transform:scale(1.75);opacity:0}}
+.mic.cancel{background:var(--ink-4);color:var(--bg)}
+.mic.cancel .ring{border-color:var(--ink-4)}
+.mic .bars{display:flex;gap:3.5px;align-items:center;height:34px}
+.mic .bars i{width:4px;border-radius:2px;background:currentColor;height:10px;animation:bar 900ms var(--ease) infinite}
+.mic .bars i:nth-child(2){animation-delay:120ms}
+.mic .bars i:nth-child(3){animation-delay:240ms}
+.mic .bars i:nth-child(4){animation-delay:360ms}
+.mic .bars i:nth-child(5){animation-delay:480ms}
+@keyframes bar{0%,100%{height:9px}50%{height:30px}}
+.overlay .hintline{font-size:12px;color:var(--ink-3);letter-spacing:.3px}
+.spinner{
+  width:34px;height:34px;border-radius:var(--r-full);
+  border:2.5px solid var(--line);border-top-color:var(--accent);
+  animation:spin 900ms linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading{display:inline-flex;align-items:center;gap:8px;color:var(--ink-2);font-size:13px}
+.loading .spinner{width:16px;height:16px;border-width:2px}
+.btn[disabled] .spinner{border-color:var(--line);border-top-color:var(--ink-3)}
+
+/* ==========================================================================
+   13 · 底部表单 sheet
+   ========================================================================== */
+.scrim{position:absolute;inset:0;background:var(--glass-scrim);z-index:22;animation:fade 160ms var(--ease)}
+.sheet{
+  position:absolute;left:0;right:0;bottom:0;z-index:23;
+  background:var(--surface);color:var(--ink-1);
+  border-radius:var(--r-xl) var(--r-xl) 0 0;
+  padding:10px 18px 22px;max-height:88%;overflow-y:auto;
+  box-shadow:var(--sh-float), 0 -1px 0 var(--hair) inset;
+  animation:up 260ms var(--ease);
+}
+@keyframes up{from{transform:translateY(18px);opacity:.6}to{transform:none;opacity:1}}
+.sheet .grab{width:38px;height:4.5px;border-radius:var(--r-full);background:var(--line-control);margin:0 auto 14px}
+.sheet h3{margin:0 0 4px;font-size:19px;font-weight:700;letter-spacing:-.3px}
+.sheet h3.warn{color:var(--warn)}
+.sheet .sub{font-size:12.5px;color:var(--ink-3);margin-bottom:16px;line-height:1.5}
+.heard{
+  background:var(--surface-2);border-radius:var(--r-m);padding:12px 13px;margin-bottom:14px;font-size:13px;
+  color:var(--ink-2);box-shadow:inset 0 0 0 1px var(--hair);
+}
+.heard b{font-weight:650;color:var(--ink-1)}
+.field{margin-bottom:14px}
+.field > label{display:block;font-size:12px;color:var(--ink-3);margin-bottom:6px}
+.field input{
+  width:100%;border:1px solid var(--line-control);background:var(--surface-2);color:var(--ink-1);
+  border-radius:var(--r-m);padding:12px 13px;font-size:16px;font-family:inherit;min-height:48px;
+  font-variant-numeric:tabular-nums;
+}
+.field input::placeholder{color:var(--ink-3)}
+.field input:focus{border-color:var(--accent);outline:2px solid var(--accent);outline-offset:1px}
+.field.amount input{font-size:30px;font-weight:700;letter-spacing:-.03em;padding:10px 13px;font-feature-settings:"tnum" 1}
+.field .err{color:var(--warn);font-size:12px;margin-top:6px}
+.field .quick{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.field .quick button{
+  border:1px solid var(--line-control);background:var(--surface-2);border-radius:var(--r-full);cursor:pointer;
+  font-family:inherit;font-size:12.5px;color:var(--ink-2);padding:8px 13px;min-height:var(--tap);
+  display:flex;align-items:center;justify-content:center;
+}
+.field .quick button:hover{background:var(--surface-3);color:var(--ink-1)}
+.field .quick button[data-on="1"]{border-color:var(--accent);color:var(--accent);background:var(--surface)}
+.chips{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.chipsel{
+  position:relative;border:1px solid var(--line-control);background:var(--surface-2);border-radius:var(--r-full);cursor:pointer;
+  font-family:inherit;font-size:13px;color:var(--ink-2);padding:11px 12px;min-height:46px;
+  display:flex;align-items:center;justify-content:center;
+}
+.chipsel:hover{background:var(--surface-3)}
+.chipsel[data-on="1"]{border-color:var(--accent);color:var(--accent);font-weight:650;background:var(--surface)}
+/* 色点改为绝对定位：原先它是 flex 项，与文字各占一半，导致文字整体右偏 7.5px（“没居中”）。 */
+.chipsel .sw{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:9px;height:9px;border-radius:var(--r-full)}
+.actions{display:flex;gap:10px;margin-top:20px}
+/* 统计页历史查询二级菜单 */
+.jumppanel{
+  position:absolute;left:16px;right:16px;top:96px;z-index:24;padding:14px 16px 16px;
+  animation:up 200ms var(--ease);
+}
+.jp-head{display:flex;align-items:center;margin-bottom:10px}
+.jp-head b{font-size:15px;font-weight:700}
+.jp-x{
+  margin-left:auto;width:30px;height:30px;border-radius:var(--r-full);border:1px solid var(--line-control);
+  background:transparent;color:var(--ink-2);display:grid;place-items:center;cursor:pointer;
+}
+.jp-x:hover{background:var(--surface-3);color:var(--ink-1)}
+.jp-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.jp-t{font-size:11.5px;color:var(--ink-3);margin-bottom:6px;text-align:center}
+.jp-col{max-height:212px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.jp-col button{
+  border:0;background:transparent;color:var(--ink-2);font-family:inherit;font-size:14px;
+  padding:9px 6px;min-height:38px;border-radius:var(--r-full);cursor:pointer;font-variant-numeric:tabular-nums;
+}
+.jp-col button:hover{background:var(--surface-3);color:var(--ink-1)}
+.jp-col button[data-on="1"]{background:var(--accent);color:var(--accent-ink);font-weight:650}
+.jp-foot{display:flex;gap:10px;margin-top:14px}
+.btn{
+  position:relative;flex:1;border-radius:var(--r-full);border:1px solid transparent;cursor:pointer;font-family:inherit;
+  font-size:15.5px;font-weight:620;padding:14px 16px;min-height:50px;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:var(--sh-glass);
+  transition:filter var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.btn svg{width:17px;height:17px;display:block}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.ghost{background:var(--surface-2);border-color:var(--line-control);color:var(--ink-1)}
+.btn.ghost:hover{background:var(--surface-3)}
+/* 危险动作：琥珀 + 垃圾桶/感叹号形状，绝不用红（v3 §3 纪律 4） */
+.btn.warn{background:var(--warn);color:var(--warn-ink)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* ==========================================================================
+   14 · toast
+   ========================================================================== */
+.toast{
+  position:absolute;left:16px;right:16px;bottom:96px;z-index:30;
+  background:var(--glass-card);color:var(--ink-1);
+  backdrop-filter:blur(var(--glass-blur-card)) saturate(var(--glass-sat));
+  border-radius:var(--r-full);padding:12px 14px;display:flex;align-items:center;gap:12px;
+  font-size:13.5px;box-shadow:var(--sh-glass);
+  animation:up 200ms var(--ease);
+}
+.toast .undo{
+  margin-left:auto;border:0;background:transparent;color:var(--accent);
+  font-family:inherit;font-size:13.5px;font-weight:650;cursor:pointer;min-height:var(--tap);padding:0 8px;
+}
+
+/* ==========================================================================
+   15 · 口径注释（D1–D7 落点）
+   ========================================================================== */
+.note{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:10.5px;letter-spacing:.02em;
+  background:var(--surface-2);color:var(--ink-3);
+  border-radius:var(--r-full);padding:4px 10px;margin:0 0 10px;
+  box-shadow:inset 0 0 0 1px var(--line-2);
+}
+.note::before{content:"";width:6px;height:6px;border-radius:var(--r-full);background:var(--accent);flex:none}
+
+/* ==========================================================================
+   16 · Tweaks（在设备框之外）
+   ========================================================================== */
+.tweak-btn{
+  position:fixed;right:20px;bottom:20px;z-index:90;
+  width:52px;height:52px;border-radius:var(--r-full);border:1px solid var(--line-control);
+  background:var(--surface);color:var(--ink-1);cursor:pointer;box-shadow:var(--sh-float);
+  font-family:inherit;font-size:12px;font-weight:650;
+}
+.tweak-btn:hover{background:var(--surface-2)}
+.tweak-panel{
+  position:fixed;right:20px;bottom:86px;z-index:91;width:308px;
+  background:var(--glass-card);border:1px solid var(--glass-rim-2);border-radius:var(--r-l);
+  backdrop-filter:blur(var(--glass-blur-hi)) saturate(var(--glass-sat));
+  box-shadow:var(--sh-float);padding:15px 15px 17px;display:none;
+  max-height:78vh;overflow-y:auto;
+}
+.tweak-panel[data-open="1"]{display:block}
+.tweak-panel h3{margin:0 0 2px;font-size:14px;font-weight:700}
+.tweak-panel .cap{font-size:11.5px;color:var(--ink-3);margin-bottom:13px;line-height:1.5}
+.tw{margin-bottom:14px}
+.tw > .k{font-size:11.5px;color:var(--ink-3);margin-bottom:6px}
+.tw .pick{justify-content:flex-start}
+.tw .pick button{font-size:12px;padding:6px 10px;min-height:var(--tap)}
+.tw hr{border:0;border-top:1px solid var(--line-2);margin:15px 0}
+.tw .foot{display:flex;gap:8px}
+.tw .foot button{
+  flex:1;border:1px solid var(--line-control);background:var(--surface-2);border-radius:var(--r-s);
+  cursor:pointer;font-family:inherit;font-size:12px;color:var(--ink-2);padding:10px 0;min-height:var(--tap);
+}
+.tw .foot button:hover{background:var(--surface-3);color:var(--ink-1)}
+.tw .foot button.warn{color:var(--warn);border-color:var(--warn)}
+
+@media (max-width:900px){ .stage{padding:20px 12px 100px;gap:22px} }
+</style>
+</head>
+<body data-motion="on">
+
+<!-- 换装哨兵（非渲染）：两套主题块同源，值逐条对照 v3 §2 -->
+<div class="pal-guard" hidden aria-hidden="true">
+  <span data-pal="dark"  data-t="--bg" data-v="#0B0B0C" data-t2="--surface" data-v2="#17181A" data-t4="--expense" data-v4="#45D07E" data-t5="--accent" data-v5="#7FE3FF"></span>
+  <span data-pal="light" data-t="--bg" data-v="#EFF1F4" data-t2="--surface" data-v2="#FFFFFF" data-t4="--expense" data-v4="#0F7A46" data-t5="--accent" data-v5="#1B5FD0"></span>
+</div>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="mark" aria-hidden="true"></span>
+    <h1>语音记账 · iOS 原型</h1>
+    <span class="chipinfo brand">v2 · 双模式</span>
+    <span class="chipinfo" id="palTag">深色</span>
+  </div>
+  <div class="hints">
+    <span><b>长按</b>语音输入录音 · 上滑取消</span>
+    <span><b>左滑</b>记录删除 · 点击编辑</span>
+    <span><b>Tweaks</b>切深浅 / 跟随系统</span>
+  </div>
+</header>
+
+<main class="stage" id="stage"></main>
+
+<button class="tweak-btn" id="tweakBtn" aria-expanded="false">Tweaks</button>
+<div class="tweak-panel" id="tweakPanel" data-open="0">
+  <h3>Tweaks</h3>
+  <div class="cap">原型参数，随时切换对照。切配色只改 <code>data-palette</code>，不重建 DOM、不丢当前页与状态。</div>
+
+  <div class="tw">
+    <div class="k">配色（v3 §2 双模式令牌表）</div>
+    <div class="pick" data-tweak="theme">
+      <button data-v="dark">深色</button><button data-v="light">浅色</button><button data-v="auto">跟随系统</button>
+    </div>
+  </div>
+
+  <div class="tw">
+    <div class="k">资产卡卡面（v3 §4 八张）</div>
+    <div class="pick" data-tweak="card">
+      <button data-v="f1">冰川蓝</button><button data-v="f2">石墨</button><button data-v="f3">深青</button>
+      <button data-v="f4">冰银</button><button data-v="f5">暖褐</button><button data-v="f6">午夜紫</button>
+      <button data-v="f7">深海</button><button data-v="f8">素瓷</button>
+    </div>
+  </div>
+
+  <div class="tw">
+    <div class="k">货币单位（D2：只换符号，不换算）</div>
+    <div class="pick" data-tweak="currency">
+      <button data-v="CNY">¥ 人民币</button><button data-v="USD">$ 美元</button><button data-v="EUR">€ 欧元</button>
+    </div>
+  </div>
+
+  <div class="tw">
+    <div class="k">语音结果处理（D6）</div>
+    <div class="pick" data-tweak="voiceMode">
+      <button data-v="confirm">预填确认卡</button><button data-v="instant">说完即记</button>
+    </div>
+  </div>
+
+  <div class="tw">
+    <div class="k">演示状态（语音链路）</div>
+    <div class="pick" data-tweak="voiceDemo">
+      <button data-v="normal">正常</button><button data-v="fail">识别失败</button>
+      <button data-v="offline">无网络</button><button data-v="denied">权限被拒</button>
+    </div>
+  </div>
+
+  <div class="tw">
+    <div class="k">动效</div>
+    <div class="pick" data-tweak="motion">
+      <button data-v="on">开</button><button data-v="off">关</button>
+    </div>
+  </div>
+
+  <div class="tw">
+    <div class="k">缩放</div>
+    <div class="pick" data-tweak="scale">
+      <button data-v="0.72">72%</button><button data-v="0.85">85%</button><button data-v="1">100%</button>
+    </div>
+  </div>
+
+  <div class="tw">
+    <div class="k">口径注释（D1–D7 落点）</div>
+    <div class="pick" data-tweak="notes">
+      <button data-v="on">显示</button><button data-v="off">隐藏</button>
+    </div>
+  </div>
+
+  <hr>
+  <div class="tw foot">
+    <button data-act="reset">恢复示例数据</button>
+    <button data-act="wipe" class="warn">清空全部</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   0. 常量
+   ============================================================ */
+const CURRENCIES = { CNY:{s:"¥",n:"人民币"}, USD:{s:"$",n:"美元"}, EUR:{s:"€",n:"欧元"} };
+const CAT_PALETTE = ["var(--c1)","var(--c2)","var(--c3)","var(--c4)","var(--c5)","var(--c6)","var(--c7)","var(--c8)"];
+const SAMPLE_SENTENCES = [
+  { say:"午饭花了三十五",       amount:35,    title:"午饭",       cat:"food" },
+  { say:"打车二十八块",         amount:28,    title:"打车",       cat:"transport" },
+  { say:"超市买菜一百二十六块五", amount:126.5, title:"超市买菜",   cat:"shopping" },
+  { say:"咖啡三十二",           amount:32,    title:"咖啡",       cat:"food" },
+  { say:"地铁六块",             amount:6,     title:"地铁",       cat:"transport" },
+];
+const PAL_TAG = { dark:"深色", light:"浅色" };
+
+/* ============================================================
+   1. 状态
+   ============================================================ */
+const baseCategories = () => ([
+  { id:"food",      name:"餐饮",   color:"var(--c1)", system:false },
+  { id:"transport", name:"交通",   color:"var(--c3)", system:false },
+  { id:"shopping",  name:"购物",   color:"var(--c4)", system:false },
+  { id:"housing",   name:"居住",   color:"var(--c2)", system:false },
+  { id:"fun",       name:"娱乐",   color:"var(--c5)", system:false },
+  { id:"other",     name:"其他",   color:"var(--c7)", system:false },
+  { id:"uncat",     name:"未分类", color:"var(--c9)", system:true  },
+]);
+
+/* 示例数据：以「今天」为锚，便于演示月/季/年三档。
+   注意：任何示例记录都不能落在未来——否则它一被打开编辑就会被「时间不能晚于现在」拦下。 */
+function seedRecords(){
+  const now = Date.now();
+  const D = (off, hh, mm) => { const t = new Date(); t.setDate(t.getDate()-off); t.setHours(hh,mm,0,0); return t.getTime(); };
+  const raw = [
+    [0,    32,   "午饭",     "food",      12, 20],
+    [0,    28,   "咖啡",     "food",      15, 40],
+    [0,    6,    "地铁",     "transport", 9,  10],
+    [0,    45,   "电影",     "fun",       20, 30],
+    [1,    126.5,"超市买菜", "shopping",  18, 5 ],
+    [1,    28,   "打车",     "transport", 22, 40],
+    [2,    2600, "房租",     "housing",   10, 0 ],
+    [2,    186,  "水电费",   "housing",   10, 5 ],
+    [3,    68,   "日用品",   "shopping",  16, 20],
+    [3,    25,   "午饭",     "food",      12, 30],
+    [5,    100,  "话费",     "housing",   11, 0 ],
+    [5,    199,  "健身",     "fun",       19, 0 ],
+    [7,    86.4, "买菜",     "shopping",  17, 50],
+    [7,    6,    "地铁",     "transport", 8,  45],
+    [9,    238,  "聚餐",     "fun",       20, 10],
+    [12,   68,   "书",       "shopping",  14, 0 ],
+    [16,   34,   "打车",     "transport", 23, 15],
+    [21,   76,   "医药",     "other",     10, 20],
+    [27,   2600, "房租",     "housing",   10, 0 ],
+    [33,   899,  "家电",     "shopping",  15, 30],
+    [41,   1680, "旅行",     "fun",       9,  0 ],
+    [55,   2600, "房租",     "housing",   10, 0 ],
+    [63,   450,  "家具",     "housing",   14, 40],
+    [78,   520,  "体检",     "other",     9,  30],
+    [95,   1200, "学费",     "other",     16, 0 ],
+  ];
+  return raw.map((r,i) => {
+    let ts = D(r[0], r[4], r[5]);
+    /* 只有「今天」的示例记录可能落在未来：依次往前错开，仍留在今天 */
+    if(r[0] === 0 && ts > now - 60000){
+      ts = now - 60000 * (12 + i * 47);
+      const dayStart = new Date(); dayStart.setHours(0, 8, 0, 0);
+      if(ts < dayStart.getTime()) ts = dayStart.getTime() + i * 60000;
+    }
+    return { id: "r"+(i+1), amount: r[1], title: r[2], cat: r[3], ts };
+  });
+}
+
+let store = {
+  categories: baseCategories(),
+  records: seedRecords(),
+  currency: "CNY",
+};
+
+/* 配色：dark / light / auto（auto → 跟系统）。默认深色（v3 §2 默认深色）。 */
+let ui = {
+  theme:"dark", systemLight:false, motion:"on", voiceMode:"confirm", voiceDemo:"normal",
+  notes:"off", scale:1, card:"f1",
+};
+/* 截图/看稿用的初始覆盖：?palette=light|dark 或 #light|#dark；卡面 #{f1..f8} 或 ?card=f8
+   （Tweaks 一点即恢复常规语义。扩展卡面是为了让 8 张卡面都能被无头逐个留证。） */
+try{
+  const qs = new URLSearchParams(location.search);
+  const h = String(location.hash||"").replace(/^#/,"");
+  const p = (qs.get("palette") || h).split(",")[0];
+  if(p === "light"){ ui.theme = "light"; ui.systemLight = true; }
+  if(p === "dark"){ ui.theme = "dark"; }
+  const c = qs.get("card") || (/^f[1-8]$/.test(h) ? h : "");
+  if(/^f[1-8]$/.test(c)) ui.card = c;
+}catch(_){}
+
+/* 每个设备框独立视图 */
+const VIEW_KEYS = ["book","stats","history","settings"];
+let frames = VIEW_KEYS.map((k,i) => ({
+  i, screen:k,
+  settingsStack:["root"],
+  monthCursor:0,          // 历史页月份偏移
+  range:"month",          // 统计页 月/季/年
+  anchor:null,            // 统计页历史锚点 {y,m}；null = 看「现在」
+  jump:null,              // 统计页月份二级菜单的草稿 {y,m}
+  sheet:null,             // 底部表单
+  overlay:null,           // 录音/解析/权限浮层
+  toast:null,
+  parsed:"",              // 识别文本
+  swiped:null,            // 已左滑的记录 id
+  toastTimer:null,
+}));
+
+/* 状态钩子（只服务于无头留证，可用逗号组合）：#dark,sheet / #dark,jump / #light,swipe
+   放到 setTimeout(0)，确保 store 与首屏绘制都已就绪。 */
+setTimeout(() => { try{
+  const st = new Set(String(location.hash||"").replace(/^#/,"").split(",").map(s=>s.trim()).filter(Boolean));
+  const now = new Date();
+  if(st.has("jump")) frames[1].jump = { y: now.getFullYear(), m: now.getMonth() };
+  if(st.has("sheet")) openEditor(frames[0], {});
+  if(st.has("swipe")) frames[0].swiped = store.records[0] ? store.records[0].id : null;
+  if(st.has("jump") || st.has("sheet") || st.has("swipe")) paint();
+}catch(_){} }, 0);
+
+/* ============================================================
+   2. 主题（只改 <html data-palette>，绝不重建 DOM）
+   ============================================================ */
+function resolvedPalette(){
+  if(ui.theme === "auto") return ui.systemLight ? "light" : "dark";
+  return ui.theme === "light" ? "light" : "dark";
+}
+const mqLight = (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)")) || null;
+function setPalette(){
+  const p = resolvedPalette();
+  if(document.documentElement.dataset.palette !== p) document.documentElement.dataset.palette = p;
+  const tag = document.getElementById("palTag");
+  if(tag) tag.textContent = (ui.theme === "auto" ? "跟随系统 · " : "") + PAL_TAG[p];
+}
+if(mqLight){
+  const onSys = e => { ui.systemLight = !!e.matches; if(ui.theme === "auto") setPalette(); };
+  if(mqLight.addEventListener) mqLight.addEventListener("change", onSys);
+  else if(mqLight.addListener) mqLight.addListener(onSys);
+  ui.systemLight = !!mqLight.matches;
+}
+
+/* ============================================================
+   3. 工具
+   ============================================================ */
+const $  = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const sym = () => CURRENCIES[store.currency].s;
+const money = n => {
+  const v = Math.round(n*100)/100;
+  return v.toLocaleString("zh-CN",{minimumFractionDigits: v % 1 === 0 ? 0 : 2, maximumFractionDigits:2});
+};
+const catOf = id => store.categories.find(c => c.id === id) || { id:"uncat", name:"未分类", color:"var(--c9)", system:true };
+const pad2 = n => String(n).padStart(2,"0");
+const dayKey = ts => { const d = new Date(ts); return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); };
+const hm = ts => { const d = new Date(ts); return pad2(d.getHours())+":"+pad2(d.getMinutes()); };
+const WEEK = ["周日","周一","周二","周三","周四","周五","周六"];
+const isToday = ts => dayKey(ts) === dayKey(Date.now());
+const isSameMonth = (ts, base) => { const a=new Date(ts), b=new Date(base); return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth(); };
+
+/* 统计区间。anchor = {y,m} 历史锚点；null 表示看「现在」。
+   end 统一 clamp 到今天：锚在过去时，区间按自然月末/季末/年末收口，不会被截断在“今天”。 */
+function rangeBounds(range, anchor){
+  const now = new Date(); now.setHours(23,59,59,999);
+  const nowTs = now.getTime();
+  const y = anchor ? anchor.y : now.getFullYear();
+  const m = anchor ? anchor.m : now.getMonth();
+  const clampEnd = ts => Math.min(ts, nowTs);
+  if(range === "month"){
+    const s = new Date(y, m, 1, 0,0,0,0);
+    const e = new Date(y, m+1, 0, 23,59,59,999);
+    const label = (y === now.getFullYear()) ? (m+1)+" 月" : y+" 年 "+(m+1)+" 月";
+    return { start:s.getTime(), end:clampEnd(e.getTime()), label };
+  }
+  if(range === "quarter"){
+    const q = Math.floor(m/3);
+    const s = new Date(y, q*3, 1, 0,0,0,0);
+    const e = new Date(y, q*3+3, 0, 23,59,59,999);
+    return { start:s.getTime(), end:clampEnd(e.getTime()), label: y+" Q"+(q+1), quarterStart:q*3 };
+  }
+  const s = new Date(y, 0, 1, 0,0,0,0);
+  const e = new Date(y, 11, 31, 23,59,59,999);
+  return { start:s.getTime(), end:clampEnd(e.getTime()), label: y+" 年" };
+}
+
+/* 统计分桶：月=按天 / 季=按周 / 年=按月（D3） */
+function buckets(range, anchor){
+  const b = rangeBounds(range, anchor);
+  const out = [];
+  if(range === "month"){
+    const nowD = new Date(b.end);
+    const daysInMonth = new Date(nowD.getFullYear(), nowD.getMonth()+1, 0).getDate();
+    for(let d=1; d<=daysInMonth; d++){
+      const s = new Date(nowD.getFullYear(), nowD.getMonth(), d, 0,0,0,0).getTime();
+      const e = s + 86400000 - 1;
+      out.push({ label: ((d-1) % 5 === 0) ? String(d) : "", start:s, end:e, sum:0, future: s > b.end });
+    }
+  } else if(range === "quarter"){
+    for(let w=0; w<13; w++){
+      const s = b.start + w*7*86400000;
+      const e = s + 7*86400000 - 1;
+      if(s > b.end) break;
+      out.push({ label: (w % 3 === 0) ? "W"+(w+1) : "", start:s, end:e, sum:0 });
+    }
+  } else {
+    for(let m=0; m<12; m++){
+      const s = new Date(new Date(b.end).getFullYear(), m, 1, 0,0,0,0).getTime();
+      const e = new Date(new Date(b.end).getFullYear(), m+1, 1, 0,0,0,0).getTime()-1;
+      out.push({ label:(m+1)+"月", start:s, end:e, sum:0, future: s > b.end });
+    }
+  }
+  return out;
+}
+
+function inRangeRecords(range, anchor){
+  const b = rangeBounds(range, anchor);
+  return store.records.filter(r => r.ts >= b.start && r.ts <= b.end);
+}
+
+/* ============================================================
+   4. 渲染 — 通用块
+   ============================================================ */
+function statusbar(){
+  return `<div class="statusbar">
+    <span>9:41</span><span class="grow"></span>
+    <span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:11px"></i></span>
+    <span style="font-size:11px;margin-left:4px">5G</span>
+    <span class="bat"></span>
+  </div>`;
+}
+/* 尖角指示符：统一用 SVG（文字 ‹ › 在各字号下粗细/基线都不稳定） */
+const CHEV = d => `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d<0?'<path d="M14.6 5.2L7.8 12l6.8 6.8"/>':'<path d="M9.4 5.2L16.2 12l-6.8 6.8"/>'}</svg>`;
+
+/* 底部 Tab 图标：线条图标（几何线稿，非插画），随选中态取色 */
+const TAB_ICONS = {
+  book:'<path d="M4.8 4.6h11.4a2 2 0 0 1 2 2v12.8a2 2 0 0 1-2 2H4.8z"/><path d="M4.8 4.6v16.8"/><path d="M9 9.4h5.6M9 13.2h5.6"/>',
+  stats:'<path d="M3.6 20.2h16.8"/><path d="M6.6 20.2v-6.4M12 20.2V5.2M17.4 20.2v-9.4"/>',
+  history:'<circle cx="12" cy="11.8" r="7.6"/><path d="M12 7.6v4.6l3.1 1.9"/>',
+  settings:'<path d="M3.8 7.2h6.4M14.4 7.2h5.8M3.8 16.8h3.4M11.4 16.8h8.8"/><circle cx="12.2" cy="7.2" r="2.2"/><circle cx="9.2" cy="16.8" r="2.2"/>'
+};
+/* 线条图标：形状是语义的冗余通道（危险/删除靠形状而不是只靠颜色） */
+const ICON = {
+  mic:'<path d="M12 4.4a2.6 2.6 0 0 1 2.6 2.6v4.6a2.6 2.6 0 0 1-5.2 0V7A2.6 2.6 0 0 1 12 4.4z"/><path d="M6.2 11.2a5.8 5.8 0 0 0 11.6 0"/><path d="M12 17v3.2M9 20.2h6"/>',
+  plus:'<path d="M12 5.4v13.2M5.4 12h13.2"/>',
+  trash:'<path d="M4.8 7.2h14.4"/><path d="M9.4 7.2V5.4h5.2v1.8"/><path d="M6.6 7.2l1 12.2a1.6 1.6 0 0 0 1.6 1.4h5.6a1.6 1.6 0 0 0 1.6-1.4l1-12.2"/><path d="M10.4 10.8v6.2M13.6 10.8v6.2"/>',
+  warn:'<path d="M12 3.8L21 19.6H3z"/><path d="M12 9.4v4.4M12 16.6v.1"/>',
+  note:'<path d="M5.4 4.6h13.2v14.8H5.4z"/><path d="M9 9.2h6M9 12.6h6M9 16h3.4"/>',
+  ledger:'<path d="M4.6 19.4h14.8"/><path d="M8 19.4v-6.6M12 19.4V6.6M16 19.4v-9.4"/>',
+  search:'<circle cx="11" cy="11" r="6.2"/><path d="M15.6 15.6l3.8 3.8"/><path d="M8.6 12.4h4.8"/>'
+};
+const svgIcon = (d,size) => `<svg viewBox="0 0 24 24" width="${size||18}" height="${size||18}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+
+function tabbar(f){
+  const items = [["book","记账"],["stats","统计"],["history","历史"],["settings","设置"]];
+  return `<nav class="tabbar" role="tablist" aria-label="主导航">` + items.map(([k,n]) =>
+    `<button class="tab" role="tab" aria-selected="${f.screen===k}" data-action="tab" data-tab="${k}" data-on="${f.screen===k?1:0}" aria-label="${n}">
+       <span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TAB_ICONS[k]}</svg></span><span>${n}</span>
+     </button>`).join("") + `</nav>`;
+}
+function note(text){ return ui.notes==="on" ? `<div class="note">${esc(text)}</div>` : ""; }
+
+/* ============================================================
+   5. 资产卡（v3 §4 八张卡面，卡面层与 card-faces.html 同源）
+   ============================================================ */
+const CARD_NAMES = { f1:"冰川蓝主卡", f2:"中性石墨", f3:"深青", f4:"冰银", f5:"暖褐", f6:"午夜紫", f7:"深海", f8:"素瓷" };
+function assetCard(f, monthSum){
+  const cls = "face " + (ui.card || "f1") + ((ui.card||"f1") === "f1" ? " no-tex" : "");
+  const m = new Date();
+  return `<div class="asset" id="assetCard-${f.i}" data-card="${ui.card||"f1"}" data-face="glacier-card"
+    role="img" aria-label="${esc(CARD_NAMES[ui.card||"f1"])} · 本月支出 ${sym()}${money(monthSum)}">
+    <div class="${cls}">
+      <span class="chip" aria-hidden="true"></span>
+      <span class="logo"><span class="mark" aria-hidden="true"></span>VoiceLedger</span>
+      <div class="info">
+        <span class="lbl">本月支出</span>
+        <span class="number">${sym()} ${money(monthSum)}</span>
+        <div class="row">
+          <span class="holder">主账户</span>
+          <span class="period"><i>账期</i>${m.getFullYear()}.${pad2(m.getMonth()+1)}</span>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   6. 渲染 — 各页
+   ============================================================ */
+function recordRow(r, f){
+  const c = catOf(r.cat);
+  const swiped = f.swiped === r.id;
+  return `<li class="item${swiped ? " swiped" : ""}" data-id="${r.id}">
+    <button class="item-del" data-action="del" data-id="${r.id}" aria-label="删除这条记录">${svgIcon(ICON.trash,17)}删除</button>
+    <div class="item-face" data-row="${r.id}" style="${swiped?"transform:translateX(-76px)":""}">
+      <span class="dot" style="background:${c.color}">${esc(c.name.slice(0,1))}</span>
+      <span class="mid">
+        <span class="tt">${esc(r.title || c.name)}</span>
+        <span class="mm">${c.name} · ${hm(r.ts)}</span>
+      </span>
+      <span class="amt neg">${sym()}${money(r.amount)}</span>
+    </div>
+  </li>`;
+}
+
+function renderBook(f){
+  const now = Date.now();
+  const monthSum = store.records.filter(r => isSameMonth(r.ts, now)).reduce((a,r)=>a+r.amount,0);
+  const today = store.records.filter(r => isToday(r.ts)).sort((a,b)=>b.ts-a.ts);
+  const todaySum = today.reduce((a,r)=>a+r.amount,0);
+  const count = store.records.filter(r => isSameMonth(r.ts, now)).length;
+  const monthAvg = monthSum / new Date().getDate();
+
+  return `${statusbar()}
+  <div class="nav"><h2>记一笔</h2><span class="sub">${new Date().getMonth()+1} 月 · ${count} 笔</span></div>
+  <div class="scroll" data-screen-label="记账">
+    ${assetCard(f, monthSum)}
+
+    <div class="substats">
+      <span class="st"><i>今天</i><b><small>${sym()}</small>${money(todaySum)}</b></span>
+      <span class="st"><i>日均</i><b><small>${sym()}</small>${money(monthAvg)}</b></span>
+    </div>
+
+    ${note("D2 货币只换符号不换算 · D5 仅支出，金额恒正")}
+
+    <div class="rows">
+      <button class="rowcard voice" data-action="voice-down" data-screen-label="语音输入">
+        <span class="base">${svgIcon(ICON.mic,18)}</span>
+        <span class="tx"><span class="tt">按住说话</span><span class="dd">松开结束 · 上滑取消</span></span>
+        <span class="go">${CHEV(1)}</span>
+      </button>
+      <button class="rowcard" data-action="manual" data-screen-label="手动输入">
+        <span class="base">${svgIcon(ICON.plus,18)}</span>
+        <span class="tx"><span class="tt">手动输入</span><span class="dd">金额 · 标题 · 时间 · 分类</span></span>
+        <span class="go">${CHEV(1)}</span>
+      </button>
+    </div>
+
+    ${note("D6 语音结果走预填确认卡，与手动输入复用同一张表单")}
+
+    <div class="sec-head"><h3>今日记录</h3><span class="sum">${today.length} 笔 · ${sym()}${money(todaySum)}</span></div>
+    ${today.length ? `<ul class="list">${today.map(r=>recordRow(r,f)).join("")}</ul>`
+      : `<div class="empty"><span class="glyph">${svgIcon(ICON.ledger,44)}</span><p>今天还没有记录</p><span>按住上方「按住说话」说一句，或手动输入</span></div>`}
+  </div>
+  ${tabbar(f)}`;
+}
+
+/* 趋势图：内联 SVG · Y 轴刻度在右 · 极淡虚线网格 · 折线 + 渐变填充（v3 硬要求） */
+const CHART_H = 132;                    /* 与 .chart svg 的 height 保持一致 */
+function trendChart(bs, max){
+  const n = bs.length;
+  /* 曲线上下各留 5% 余量，折线因此不碰网格与 Y 轴刻度 */
+  const yPix = v => CHART_H - ((v/Math.max(1,max))*(CHART_H*0.90) + CHART_H*0.05);
+  const pts = bs.map((b,i) => (n===1?50:(i/(n-1))*100).toFixed(2) + "," + ((yPix(b.sum)/CHART_H)*100).toFixed(2));
+  const line = pts.join(" ");
+  const area = `0,100 ` + line + ` 100,100`;
+  const grid = [CHART_H*0.05, CHART_H*0.5, CHART_H*0.95].map(top =>
+    `<span style="top:${(top/CHART_H*100).toFixed(2)}%"></span>`).join("");
+  const yax = [ {pc:100, top:CHART_H*0.05}, {pc:50, top:CHART_H*0.5}, {pc:0, top:CHART_H*0.95} ].map(o =>
+    `<span style="top:calc(${(o.top/CHART_H*100).toFixed(2)}% - 5px)">${
+      o.pc===100 ? sym()+money(max) : o.pc===0 ? sym()+"0" : sym()+money(Math.round(max*o.pc/100))}</span>`).join("");
+  const mid = bs.findIndex(b => Date.now() >= b.start && Date.now() <= b.end);
+  const step = n > 5 ? 2 : 1;            /* 刻度太密时隔一个隐藏，避免小字互相叠压 */
+  const xax = bs.map((b,i) =>
+    `<span class="${i===mid?'mid':''}">${(i % step === 0 || i === mid) ? b.label : ""}</span>`).join("");
+  return `<div class="chart">
+    <div class="grid">${grid}</div>
+    <div class="yax">${yax}</div>
+    <svg viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="支出趋势折线图">
+      <defs>
+        <linearGradient id="trg-${bs.length}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--expense)" stop-opacity=".30"/>
+          <stop offset="100%" stop-color="var(--expense)" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <polygon class="t-area" points="${area}" fill="url(#trg-${bs.length})" stroke="none"/>
+      <polyline class="t-line" points="${line}" fill="none" stroke="var(--expense)"
+        stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+    </svg>
+    <div class="xax">${xax}</div>
+  </div>`;
+}
+
+/* 统计页「历史查询」二级菜单：点右上角月份弹出，月/年两列 + 现在 / 完成（用户给的参考形态） */
+function statJumpPanel(f){
+  const j = f.jump; if(!j) return "";
+  const cy = new Date().getFullYear();
+  const years = []; for(let y = cy; y >= cy-3; y--) years.push(y);
+  return `<div class="scrim" data-action="stat-jump-close" aria-hidden="true"></div>
+  <div class="card jumppanel" role="dialog" aria-modal="true" aria-label="历史查询">
+    <div class="jp-head"><b>历史查询</b>
+      <button class="jp-x" data-action="stat-jump-close" aria-label="关闭">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="jp-cols">
+      <div class="jp-col"><div class="jp-t">月份</div>
+        ${[...Array(12)].map((_,i)=>`<button data-action="stat-jump-month" data-v="${i}" data-on="${j.m===i?1:0}">${i+1} 月</button>`).join("")}
+      </div>
+      <div class="jp-col"><div class="jp-t">年份</div>
+        ${years.map(y=>`<button data-action="stat-jump-year" data-v="${y}" data-on="${j.y===y?1:0}">${y} 年</button>`).join("")}
+      </div>
+    </div>
+    <div class="jp-foot">
+      <button class="btn ghost" data-action="stat-jump-now">现在</button>
+      <button class="btn primary" data-action="stat-jump-done">完成</button>
+    </div>
+  </div>`;
+}
+
+function renderStats(f){
+  const A = f.anchor;
+  const rows = inRangeRecords(f.range, A);
+  const total = rows.reduce((a,r)=>a+r.amount,0);
+  const bs = buckets(f.range, A);
+  rows.forEach(r => { const b = bs.find(b => r.ts >= b.start && r.ts <= b.end); if(b) b.sum += r.amount; });
+  const max = Math.max(1, ...bs.map(b=>b.sum));
+  const days = Math.max(1, Math.round((rangeBounds(f.range, A).end - rangeBounds(f.range, A).start) / 86400000) + 1);
+
+  /* 分布（D3：降序，>8 类合并「其他」） */
+  const byCat = {};
+  rows.forEach(r => { byCat[r.cat] = (byCat[r.cat]||0) + r.amount; });
+  let dist = Object.entries(byCat).map(([id,v]) => ({...catOf(id), v})).sort((a,b)=>b.v-a.v);
+  let merged = 0;
+  if(dist.length > 8){ merged = dist.slice(7).reduce((a,c)=>a+c.v,0); dist = dist.slice(0,7).concat([{id:"merged",name:"其他分类",color:"var(--c9)",v:merged}]); }
+  const distMax = Math.max(1, ...dist.map(d=>d.v));
+
+  return `${statusbar()}
+  ${statJumpPanel(f)}
+  <div class="nav"><h2>统计</h2>
+    <button class="jump" data-action="stat-jump" aria-haspopup="dialog" aria-expanded="${f.jump?"true":"false"}">
+      ${rangeBounds(f.range, A).label}
+      <svg class="caret" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9.5l6 6 6-6"/></svg>
+    </button>
+  </div>
+  <div class="scroll" data-screen-label="统计">
+    <div class="seg" data-action="range">
+      <button data-v="month" data-on="${f.range==="month"?1:0}">月</button>
+      <button data-v="quarter" data-on="${f.range==="quarter"?1:0}">季度</button>
+      <button data-v="year" data-on="${f.range==="year"?1:0}">年</button>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="k">总支出</div><div class="v">${sym()}${money(total)}</div></div>
+      <div class="kpi"><div class="k">日均</div><div class="v sm">${sym()}${money(total/days)}</div></div>
+      <div class="kpi"><div class="k">笔数</div><div class="v sm">${rows.length}</div></div>
+    </div>
+
+    ${total === 0 ? `<div class="empty"><span class="glyph">${svgIcon(ICON.ledger,44)}</span><p>这段时间没有支出</p><span>换个区间看看，或先去记一笔</span></div>` : `
+    <div class="card">
+      <h4>趋势</h4>
+      <div class="cap">${f.range==="month"?"按天":f.range==="quarter"?"按周":"按月"} · 单位 ${sym()} · 峰值 ${sym()}${money(max)}</div>
+      ${trendChart(bs, max)}
+    </div>
+
+    <div class="card">
+      <h4>分类分布</h4>
+      <div class="cap">从高到低 · 共 ${dist.length} 个分类 · 首位占 ${total?Math.round(dist[0].v/total*100):0}%</div>
+      <div class="dist">
+        ${dist.map(d=>`<div class="d-row">
+          <span class="name">${esc(d.name)}</span>
+          <span class="track"><span class="fill" style="width:${Math.round(d.v/distMax*100)}%;background:${d.color}"></span></span>
+          <span class="num"><b>${sym()}${money(d.v)}</b><br>${Math.round(d.v/total*100)}%</span>
+        </div>`).join("")}
+      </div>
+      <div class="legend-note">条内同时用长度与数值编码，不单独依赖颜色（色觉障碍可用）。${merged?`已合并 ${dist.length-1} 类以上为「其他分类」。`:""}</div>
+    </div>
+    ${note("D3 月=按天 / 季=按周 / 年=按月；分布图恒降序，超 8 类合并")}`}
+  </div>
+  ${tabbar(f)}`;
+}
+
+function renderHistory(f){
+  const base = new Date(); base.setDate(1); base.setMonth(base.getMonth() + f.monthCursor);
+  const y = base.getFullYear(), m = base.getMonth();
+  const rows = store.records
+    .filter(r => { const d = new Date(r.ts); return d.getFullYear()===y && d.getMonth()===m; })
+    .sort((a,b)=>b.ts-a.ts);
+  const sum = rows.reduce((a,r)=>a+r.amount,0);
+
+  const groups = {};
+  rows.forEach(r => { const k = dayKey(r.ts); (groups[k] = groups[k] || []).push(r); });
+  const keys = Object.keys(groups).sort((a,b)=> a<b?1:-1);
+
+  return `${statusbar()}
+  <div class="nav"><h2>历史</h2><span class="sub">${rows.length} 笔 · ${sym()}${money(sum)}</span></div>
+  <div class="scroll" data-screen-label="历史">
+    <div class="monthnav">
+      <button data-action="month" data-d="-1" aria-label="上个月">${CHEV(-1)}</button>
+      <span class="m">${y} 年 ${m+1} 月</span>
+      <button data-action="month" data-d="1" aria-label="下个月" ${f.monthCursor>=0?"disabled style=opacity:.4":""}>${CHEV(1)}</button>
+    </div>
+    ${keys.length ? keys.map(k=>{
+      const list = groups[k];
+      const dsum = list.reduce((a,r)=>a+r.amount,0);
+      const d = new Date(list[0].ts);
+      const label = isToday(list[0].ts) ? "今天" : `${d.getMonth()+1} 月 ${d.getDate()} 日`;
+      return `<div class="daygroup">
+        <div class="daybar">
+          <span class="d">${label}</span>
+          <span class="w">${WEEK[d.getDay()]}</span>
+          <span class="s">${list.length} 笔 · ${sym()}${money(dsum)}</span>
+        </div>
+        <ul class="list">${list.map(r=>recordRow(r,f)).join("")}</ul>
+      </div>`;
+    }).join("") : `<div class="empty"><span class="glyph">${svgIcon(ICON.ledger,44)}</span><p>这个月没有记录</p><span>换个月份看看</span></div>`}
+  </div>
+  ${tabbar(f)}`;
+}
+
+function renderSettings(f){
+  const stack = f.settingsStack[f.settingsStack.length-1];
+  const body = stack === "categories" ? catManager(f)
+             : stack === "data"       ? dataManager(f)
+             : settingsRoot(f);
+
+  return `${statusbar()}
+  <div class="nav">
+    ${stack==="root" ? `<h2>设置</h2>`
+                     : `<button class="nav-btn back" data-action="pop" aria-label="返回">${CHEV(-1)}</button>
+                        <h2 style="font-size:20px">${stack==="categories"?"分类管理":"数据管理"}</h2>`}
+  </div>
+  <div class="scroll" data-screen-label="设置-${stack}">${body}</div>
+  ${tabbar(f)}`;
+}
+
+function settingsRoot(f){
+  const catCount = store.categories.filter(c=>!c.system||c.id!=="uncat").length;
+  return `
+  <div class="group">
+    <div class="gh">记账</div>
+    <div class="group-item stack">
+      <span class="label">货币单位<small>切换只改变显示符号，不做汇率换算</small></span>
+      <div class="pick" data-action="currency">
+        ${Object.entries(CURRENCIES).map(([k,c])=>`<button data-v="${k}" data-on="${store.currency===k?1:0}">${c.s} ${c.n}</button>`).join("")}
+      </div>
+    </div>
+    <div class="group-item stack">
+      <span class="label">配色<small>与 Tweaks 同一开关；只换令牌不重建页面</small></span>
+      <div class="pick" data-action="palette">
+        <button data-v="dark" data-on="${ui.theme==="dark"?1:0}">深色</button>
+        <button data-v="light" data-on="${ui.theme==="light"?1:0}">浅色</button>
+        <button data-v="auto" data-on="${ui.theme==="auto"?1:0}">跟随系统</button>
+      </div>
+    </div>
+  </div>
+  ${note("D2 单币种显示偏好；多币种记账与汇率换算列 P2，重启条件见方案")}
+
+  <div class="group">
+    <div class="gh">分类</div>
+    <button class="group-item" data-action="push" data-stack="categories">
+      <span class="label">分类管理<small>新增 · 重命名 · 删除；记录归「未分类」</small></span>
+      <span class="val">${catCount} 个</span><span class="chev">${CHEV(1)}</span>
+    </button>
+  </div>
+  ${note("D4 删除分类 = 软删 + 记录迁移「未分类」，历史不被破坏")}
+
+  <div class="group">
+    <div class="gh">数据</div>
+    <button class="group-item" data-action="push" data-stack="data">
+      <span class="label">数据管理<small>导出 CSV · 清空所有数据</small></span>
+      <span class="val">${store.records.length} 条</span><span class="chev">${CHEV(1)}</span>
+    </button>
+  </div>
+
+  <div class="group">
+    <div class="gh">关于</div>
+    <div class="group-item"><span class="label">版本<small>原型 v2 · 双模式 · 示例数据，非真实账单</small></span><span class="val">2.0.0</span></div>
+    <div class="group-item"><span class="label">语音能力<small>iOS 26+ 端上 SpeechAnalyzer：离线、无配额</small></span><span class="val">离线</span></div>
+  </div>`;
+}
+
+function catManager(f){
+  const counts = {};
+  store.records.forEach(r => counts[r.cat] = (counts[r.cat]||0)+1);
+  return `
+  <div class="group">
+    <div class="gh">分类（${store.categories.length}）</div>
+    ${store.categories.map(c=>`<div class="cat-row">
+      <span class="dot" style="background:${c.color}">${esc(c.name.slice(0,1))}</span>
+      <span class="label" style="flex:1">
+        ${esc(c.name)}
+        <small>${c.system?"系统保留 · 不可删除":(counts[c.id]||0)+" 条记录"}</small>
+      </span>
+      ${c.system ? "" : `<button class="icon-btn" data-action="rename-cat" data-id="${c.id}">改名</button>
+                          <button class="icon-btn warn" data-action="del-cat" data-id="${c.id}" aria-label="删除分类">${svgIcon(ICON.trash,16)}删除</button>`}
+    </div>`).join("")}
+  </div>
+  <button class="btn primary" data-action="add-cat" style="width:100%">${svgIcon(ICON.plus,17)} 新增分类</button>
+  <div class="notice" style="margin-top:14px">
+    删除分类时，该分类下已有记录不会消失，会统一迁移到「未分类」；「未分类」为系统保留项，不可删除或改名。
+  </div>
+  ${note("D4 三选一里选了「迁移未分类」：不阻塞用户，也不毁历史")}`;
+}
+
+function dataManager(f){
+  return `
+  <div class="group">
+    <div class="gh">导出</div>
+    <button class="group-item" data-action="export">
+      <span class="label">导出 CSV<small>UTF-8 带 BOM，Excel 打开中文不乱码</small></span>
+      <span class="chev">${CHEV(1)}</span>
+    </button>
+  </div>
+  ${note("架构评审：必须加 BOM，否则 Excel 中文乱码；字段需做引号转义")}
+
+  <div class="group">
+    <div class="gh">危险操作</div>
+    <button class="group-item warn" data-action="wipe-ask">
+      <span class="lead">${svgIcon(ICON.warn,18)}</span>
+      <span class="label">清空所有数据<small>不可恢复；建议先导出 CSV</small></span>
+      <span class="chev">${CHEV(1)}</span>
+    </button>
+  </div>
+  ${note("D1/P0-11 清空需二次确认，且提示先导出")}
+
+  <div class="group">
+    <div class="gh">存储</div>
+    <div class="group-item"><span class="label">本机记录</span><span class="val">${store.records.length} 条</span></div>
+    <div class="group-item"><span class="label">分类</span><span class="val">${store.categories.length} 个</span></div>
+    <div class="group-item"><span class="label">当前货币</span><span class="val">${CURRENCIES[store.currency].n}</span></div>
+    <div class="group-item"><span class="label">当前配色</span><span class="val">${ui.theme==="auto"?"跟随系统":PAL_TAG[resolvedPalette()]}</span></div>
+  </div>`;
+}
+
+/* ============================================================
+   7. 浮层 / 表单
+   ============================================================ */
+function renderOverlay(f){
+  if(!f.overlay) return "";
+  if(f.overlay === "recording"){
+    return `<div class="overlay" role="dialog" aria-modal="true">
+      <div class="timer" id="voiceTimer">0:00<small>.0</small></div>
+      <div class="mic ${f.recCancel?"cancel":""}" id="voiceMic">
+        <span class="ring"></span><span class="ring"></span><span class="ring"></span>
+        <span class="bars"><i></i><i></i><i></i><i></i><i></i></span>
+      </div>
+      <div class="tip" id="voiceHint">${f.recCancel ? "松手取消这一笔" : "正在聆听…说话时不用凑近麦克风"}</div>
+      <div class="hintline">松开发送 · 上滑取消</div>
+    </div>`;
+  }
+  if(f.overlay === "parsing"){
+    return `<div class="overlay" role="dialog" aria-modal="true" aria-busy="true">
+      <div class="spinner" role="status" aria-label="正在识别"></div>
+      <div class="tip">正在识别…（设备端，离线可用）</div></div>`;
+  }
+  if(f.overlay === "denied"){
+    return `<div class="overlay" role="dialog" aria-modal="true">
+      <div class="mic" style="background:transparent;border:1.8px solid var(--line-control);color:var(--ink-2);position:relative">
+        <span class="ring" style="animation:none;opacity:.5"></span>
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg></div>
+      <div class="tip"><b>没有麦克风权限</b><br>语音记账需要「语音识别」与「麦克风」权限</div>
+      <div class="actions" style="width:100%;padding:0 34px">
+        <button class="btn ghost" data-action="close-overlay">改用手动输入</button>
+        <button class="btn primary" data-action="close-overlay">去设置开启</button>
+      </div>
+    </div>`;
+  }
+  return "";
+}
+
+function renderSheet(f){
+  const s = f.sheet;
+  if(!s) return "";
+  if(s.kind === "editor"){
+    return `<div class="scrim" data-action="close-sheet" aria-hidden="true"></div>
+    <div class="sheet" role="dialog" aria-modal="true">
+      <div class="grab"></div>
+      <h3>${s.mode==="voice" ? "确认这笔支出" : (s.editing ? "编辑记录" : "手动记一笔")}</h3>
+      <div class="sub">${s.mode==="voice" ? "识别结果已预填，直接改不对的地方再保存" : "时间默认现在，可改成事后补记"}</div>
+      ${s.heard ? `<div class="heard">识别到：<b>${esc(s.heard)}</b></div>` : ""}
+      ${s.banner ? `<div class="notice">${s.banner}</div>` : ""}
+      ${s.mode==="voice" ? note("D6 预填确认卡：禁止静默入库，一次点按即可修正") : ""}
+
+      <div class="field amount">
+        <label>金额</label>
+        <input id="fAmount" inputmode="decimal" placeholder="0.00" value="${s.amount===""?"":esc(s.amount)}" autocomplete="off">
+        ${s.error ? `<div class="err">${esc(s.error)}</div>` : ""}
+      </div>
+
+      <div class="field">
+        <label>标题（可留空，自动用分类名）</label>
+        <input id="fTitle" placeholder="午饭 / 打车 / 房租…" value="${esc(s.title)}" autocomplete="off">
+      </div>
+
+      <div class="field">
+        <label>时间</label>
+        <input id="fTime" inputmode="numeric" placeholder="MM-DD HH:MM" value="${esc(s.timeText)}" autocomplete="off">
+        <div class="quick" data-action="time-quick">
+          <button data-v="now" data-on="${s.timeQuick==="now"?1:0}">现在</button>
+          <button data-v="y1" data-on="${s.timeQuick==="y1"?1:0}">昨天</button>
+          <button data-v="y2" data-on="${s.timeQuick==="y2"?1:0}">前天</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>分类</label>
+        <div class="chips" data-action="pick-cat">
+          ${store.categories.map(c=>`<button class="chipsel" data-v="${c.id}" data-on="${s.cat===c.id?1:0}">
+            <span class="sw" style="background:${c.color}"></span>${esc(c.name)}</button>`).join("")}
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn ghost" data-action="close-sheet">取消</button>
+        <button class="btn primary" data-action="save-record">${s.editing?"保存修改":"保存"}</button>
+      </div>
+    </div>`;
+  }
+  if(s.kind === "confirm-wipe"){
+    return `<div class="scrim" data-action="close-sheet" aria-hidden="true"></div>
+    <div class="sheet" role="dialog" aria-modal="true">
+      <div class="grab"></div>
+      <h3 class="warn">清空所有数据？</h3>
+      <div class="sub">将删除本机全部 ${store.records.length} 条记录与自定义分类，<b>此操作不可恢复</b>。</div>
+      <div class="notice warn">建议先导出 CSV 备份。导出入口在「数据管理 › 导出 CSV」。</div>
+      <div class="actions">
+        <button class="btn ghost" data-action="close-sheet">再想想</button>
+        <button class="btn ghost" data-action="export">先导出 CSV</button>
+        <button class="btn warn" data-action="wipe-do">${svgIcon(ICON.warn,17)} 确认清空</button>
+      </div>
+    </div>`;
+  }
+  if(s.kind === "export"){
+    return `<div class="scrim" data-action="close-sheet" aria-hidden="true"></div>
+    <div class="sheet" role="dialog" aria-modal="true">
+      <div class="grab"></div>
+      <h3>导出 CSV</h3>
+      <div class="sub">共 ${store.records.length} 条 · UTF-8 with BOM · 保存到「文件」或分享</div>
+      <div class="notice" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;white-space:pre-wrap;max-height:180px;overflow:auto">${esc(csvPreview())}</div>
+      ${s.exporting ? `<div class="loading" style="margin-top:10px"><span class="spinner" aria-hidden="true"></span>正在生成 CSV，写入「文件」…</div>` : ""}
+      <div class="actions">
+        <button class="btn ghost" data-action="close-sheet" ${s.exporting?"disabled":""}>取消</button>
+        <button class="btn primary" data-action="export-do" ${s.exporting?"disabled":""}>${s.exporting?"正在生成…":"保存 / 分享"}</button>
+      </div>
+    </div>`;
+  }
+  if(s.kind === "add-cat" || s.kind === "rename-cat"){
+    return `<div class="scrim" data-action="close-sheet" aria-hidden="true"></div>
+    <div class="sheet" role="dialog" aria-modal="true">
+      <div class="grab"></div>
+      <h3>${s.kind==="add-cat"?"新增分类":"重命名分类"}</h3>
+      <div class="sub">分类名 1–6 个字，重复名会被拦下</div>
+      <div class="field">
+        <label>名称</label>
+        <input id="fCat" maxlength="6" placeholder="例如：宠物" value="${esc(s.value||"")}" autocomplete="off">
+        ${s.error ? `<div class="err">${esc(s.error)}</div>` : ""}
+      </div>
+      <div class="actions">
+        <button class="btn ghost" data-action="close-sheet">取消</button>
+        <button class="btn primary" data-action="save-cat">保存</button>
+      </div>
+    </div>`;
+  }
+  return "";
+}
+
+function csvPreview(){
+  const head = "日期,时间,金额,货币,分类,标题";
+  const lines = store.records.slice().sort((a,b)=>b.ts-a.ts).map(r=>{
+    const d = new Date(r.ts);
+    return [ `"${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}"`, `"${hm(r.ts)}"`,
+             r.amount.toFixed(2), CURRENCIES[store.currency].s, `"${catOf(r.cat).name}"`, `"${(r.title||"").replace(/"/g,'""')}"` ].join(",");
+  });
+  return "\uFEFF" + [head].concat(lines).slice(0,14).join("\n") + (lines.length>13 ? "\n…" : "");
+}
+
+function renderToast(f){
+  if(!f.toast) return "";
+  return `<div class="toast" role="status" aria-live="polite">${esc(f.toast.text)}
+    ${f.toast.undo ? `<button class="undo" data-action="undo">撤销</button>` : ""}
+  </div>`;
+}
+
+function renderFrame(f){
+  const inner = f.screen === "book"    ? renderBook(f)
+              : f.screen === "stats"   ? renderStats(f)
+              : f.screen === "history" ? renderHistory(f)
+              :                          renderSettings(f);
+  return inner + renderOverlay(f) + renderSheet(f) + renderToast(f);
+}
+
+/* ============================================================
+   8. 渲染入口
+   ============================================================ */
+function build(){
+  const stage = $("#stage");
+  const labels = { book:"01 记账", stats:"02 统计", history:"03 历史", settings:"04 设置" };
+  stage.innerHTML = frames.map(f => `<div class="frame-wrap">
+    <div class="frame-label"><b>${labels[f.screen]}</b></div>
+    <div class="device-slot" id="slot-${f.i}">
+      <div class="device" data-frame-index="${f.i}">
+        <!-- 顶部不再放灵动岛黑块：让屏内背景一路铺满（用户要求） -->
+        <div class="screen" id="screen-${f.i}"></div>
+      </div>
+    </div>
+  </div>`).join("");
+  fitScale();
+  paint();
+}
+
+function paint(){
+  frames.forEach(f => {
+    const el = document.getElementById("screen-"+f.i);
+    if(el) el.innerHTML = renderFrame(f);
+  });
+  document.body.dataset.motion = ui.motion;
+  document.documentElement.style.setProperty("--scale", ui.scale);
+  setPalette();
+  syncTweakUI();
+}
+
+/* 只重绘某一屏；配色切换走 setPalette()，不碰 DOM */
+function paintFrame(f){
+  const el = document.getElementById("screen-"+f.i);
+  if(el) el.innerHTML = renderFrame(f);
+}
+
+/* 设备框按舞台宽度整体缩放（4 台并排不溢出、不产生横向滚动） */
+function fitScale(){
+  const stage = $("#stage"); if(!stage) return;
+  const per = 390 + 26;
+  const avail = stage.clientWidth - 48;
+  const k = Math.max(.42, Math.min(1, avail / (per * 4)));
+  $$(".device-slot").forEach(el => {
+    el.style.width = (390 * k) + "px";
+    el.style.height = (844 * k) + "px";
+  });
+  document.documentElement.style.setProperty("--fit", k.toFixed(3));
+}
+
+function syncTweakUI(){
+  $$("[data-tweak]").forEach(g => {
+    const key = g.dataset.tweak;
+    g.querySelectorAll("button").forEach(b => {
+      b.dataset.on = String(ui[key]) === b.dataset.v ? "1" : "0";
+    });
+  });
+}
+
+/* ============================================================
+   9. 表单数据同步
+   ============================================================ */
+function syncEditorFromDOM(f){
+  const s = f.sheet; if(!s || s.kind !== "editor") return;
+  const root = document.getElementById("screen-"+f.i);
+  const a = $("#fAmount", root), t = $("#fTitle", root), tm = $("#fTime", root);
+  if(a) s.amount = a.value.trim();
+  if(t) s.title = t.value;
+  if(tm) s.timeText = tm.value;
+}
+
+function fmtTimeInput(ts){
+  const d = new Date(ts);
+  return `${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+function parseTimeInput(txt){
+  const m = txt.trim().match(/^(\d{1,2})[-/.](\d{1,2})\s+(\d{1,2}):(\d{2})$/);
+  if(!m) return null;
+  const now = new Date();
+  const d = new Date(now.getFullYear(), +m[1]-1, +m[2], +m[3], +m[4], 0, 0);
+  return isNaN(d.getTime()) ? null : d.getTime();
+}
+function openEditor(f, patch){
+  const now = Date.now();
+  f.sheet = Object.assign({
+    kind:"editor", mode:"manual", editing:null,
+    amount:"", title:"", cat: store.categories[0].id,
+    timeQuick:"now", timeText: fmtTimeInput(now),
+    heard:"", banner:"", error:"",
+  }, patch || {});
+  paintFrame(f);
+}
+
+/* ============================================================
+   10. 语音链路
+   ============================================================ */
+let voice = null;
+let voiceTimerId = null;
+let sentIdx = 0;
+
+function startVoice(f){
+  if(ui.voiceDemo === "denied"){ f.overlay = "denied"; paintFrame(f); return; }
+  f.overlay = "recording"; f.recCancel = false; f.recStart = Date.now();
+  paintFrame(f);
+  clearInterval(voiceTimerId);
+  voiceTimerId = setInterval(() => {
+    const el = document.getElementById("voiceTimer");
+    if(!el) return;
+    const ms = Date.now() - f.recStart;
+    el.innerHTML = `${Math.floor(ms/60000)}:${pad2(Math.floor(ms/1000)%60)}<small>.${Math.floor(ms%1000/100)}</small>`;
+  }, 100);
+}
+
+function endVoice(f, cancelled){
+  clearInterval(voiceTimerId); voiceTimerId = null;
+  const dur = Date.now() - (f.recStart||Date.now());
+  f.overlay = null; f.recStart = null;
+  if(cancelled){ paintFrame(f); toast(f, "已取消，没有记录产生"); return; }
+  if(dur < 350){ paintFrame(f); toast(f, "按住时间太短，请按住再说（防误触）"); return; }
+
+  f.overlay = "parsing"; paintFrame(f);
+  setTimeout(() => {
+    f.overlay = null;
+    if(ui.voiceDemo === "offline"){
+      openEditor(f, { mode:"voice", banner:"无网络，语音识别暂不可用。已保留这次录音的时长，时间已填为现在，改用手动补完即可。", heard:"" });
+      return;
+    }
+    if(ui.voiceDemo === "fail"){
+      openEditor(f, { mode:"voice", banner:"没能识别出金额。录音已保留，可以重听或直接手动补充字段——不会丢数据。", heard:"" });
+      return;
+    }
+    const s = SAMPLE_SENTENCES[sentIdx++ % SAMPLE_SENTENCES.length];
+    if(ui.voiceMode === "instant"){
+      const ts = Date.now();
+      const rec = { id:"r"+Math.random().toString(36).slice(2,8), amount:s.amount, title:s.title, cat:s.cat, ts };
+      store.records.push(rec);
+      paint();
+      toast(f, `已按识别结果入账 ${sym()}${money(s.amount)}「${s.title}」`, () => {
+        store.records = store.records.filter(x => x.id !== rec.id); paint();
+      });
+      return;
+    }
+    openEditor(f, { mode:"voice", heard:s.say, amount:String(s.amount), title:s.title, cat:s.cat });
+  }, 900);
+}
+
+function toast(f, text, undoFn){
+  clearTimeout(f.toastTimer);
+  f.toast = { text, undo: !!undoFn, fn: undoFn };
+  paintFrame(f);
+  f.toastTimer = setTimeout(() => { f.toast = null; paintFrame(f); }, undoFn ? 5200 : 2400);
+}
+
+/* ============================================================
+   11. 事件
+   ============================================================ */
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-action]");
+  if(!el) return;
+  const dev = el.closest(".device");
+  const f = dev ? frames[+dev.dataset.frameIndex] : null;
+  const act = el.dataset.action;
+  /* 分段控件/选项组的 data-action 在外层，data-v 在按钮上 */
+  const vBtn = e.target.closest("button[data-v]");
+  const v = vBtn ? vBtn.dataset.v : el.dataset.v;
+
+  /* --- 无框动作（Tweaks） --- */
+  if(act === "reset" || act === "wipe"){
+    if(act === "reset"){ store.categories = baseCategories(); store.records = seedRecords(); toastAll("已恢复示例数据"); }
+    else { store.records = []; store.categories = baseCategories(); toastAll("已清空（原型内可随时恢复）"); }
+    paint(); return;
+  }
+  if(!f) return;
+
+  switch(act){
+    case "tab":
+      f.screen = el.dataset.tab; f.settingsStack = ["root"]; f.swiped = null;
+      paintFrame(f); break;
+
+    case "range":
+      f.range = v; paintFrame(f); break;
+
+    /* 统计页历史查询：右上角月份 → 二级菜单（月 / 年两列 + 现在 / 完成） */
+    case "stat-jump": {
+      const now = new Date();
+      f.jump = f.jump ? null : { y: f.anchor ? f.anchor.y : now.getFullYear(), m: f.anchor ? f.anchor.m : now.getMonth() };
+      paintFrame(f); break;
+    }
+    case "stat-jump-month": f.jump.m = Number(v); paintFrame(f); break;
+    case "stat-jump-year":  f.jump.y = Number(v); paintFrame(f); break;
+    case "stat-jump-close": f.jump = null; paintFrame(f); break;
+    case "stat-jump-now":
+      f.anchor = null; f.jump = null; paintFrame(f);
+      toast(f, "已回到现在"); break;
+    case "stat-jump-done":
+      f.anchor = { y: f.jump.y, m: f.jump.m };
+      f.jump = null; paintFrame(f);
+      toast(f, `已跳到 ${f.anchor.y} 年 ${f.anchor.m+1} 月`); break;
+
+    case "month":
+      f.monthCursor = Math.min(0, f.monthCursor + Number(el.dataset.d));
+      paintFrame(f); break;
+
+    case "push":
+      f.settingsStack.push(el.dataset.stack); paintFrame(f); break;
+    case "pop":
+      if(f.settingsStack.length > 1) f.settingsStack.pop(); paintFrame(f); break;
+
+    case "currency":
+      store.currency = v; paint(); break;
+
+    /* 配色：只改 data-palette，不重建 DOM、不丢页面与状态（v3 硬要求） */
+    case "palette":
+      ui.theme = v; setPalette(); syncTweakUI(); paintFrame(f); break;
+
+    case "manual":
+      openEditor(f, {}); break;
+
+    case "close-sheet":
+      if(f.sheet && f.sheet.kind === "editor") syncEditorFromDOM(f);
+      f.sheet = null; paintFrame(f); break;
+
+    case "close-overlay":
+      f.overlay = null; paintFrame(f); break;
+
+    case "time-quick": {
+      syncEditorFromDOM(f);
+      const base = new Date();
+      f.sheet.timeQuick = v;
+      if(v === "now"){ f.sheet.timeText = fmtTimeInput(base.getTime()); }
+      if(v === "y1"){ base.setDate(base.getDate()-1); f.sheet.timeText = fmtTimeInput(base.getTime()); }
+      if(v === "y2"){ base.setDate(base.getDate()-2); f.sheet.timeText = fmtTimeInput(base.getTime()); }
+      paintFrame(f); break;
+    }
+
+    case "pick-cat":
+      syncEditorFromDOM(f); f.sheet.cat = v; f.sheet.error = ""; paintFrame(f); break;
+
+    case "save-record": {
+      syncEditorFromDOM(f);
+      const s = f.sheet;
+      const amt = Number(String(s.amount).replace(/[^\d.\-]/g, ""));
+      if(!s.amount || isNaN(amt) || amt <= 0){ s.error = "请输入大于 0 的金额"; paintFrame(f); return; }
+      if(amt > 100000000){ s.error = "金额过大，请检查是否多输了 0"; paintFrame(f); return; }
+      const ts = parseTimeInput(s.timeText) ?? Date.now();
+      if(ts > Date.now() + 60000){ s.error = "时间不能晚于现在"; paintFrame(f); return; }
+      if(s.editing){
+        const r = store.records.find(x => x.id === s.editing);
+        if(r){ r.amount = amt; r.title = s.title.trim(); r.cat = s.cat; r.ts = ts; }
+      } else {
+        store.records.push({ id:"r"+Math.random().toString(36).slice(2,8), amount:amt, title:s.title.trim(), cat:s.cat, ts });
+      }
+      f.sheet = null; paint(); toast(f, "已保存"); break;
+    }
+
+    case "del": {
+      const id = el.dataset.id;
+      const idx = store.records.findIndex(r => r.id === id);
+      if(idx < 0) break;
+      const removed = store.records[idx];
+      store.records.splice(idx, 1);
+      f.swiped = null; paint();
+      toast(f, `已删除 ${sym()}${money(removed.amount)}「${removed.title||catOf(removed.cat).name}」`, () => {
+        store.records.splice(idx, 0, removed); paint();
+      });
+      break;
+    }
+
+    case "undo":
+      if(f.toast && f.toast.fn) f.toast.fn();
+      f.toast = null; paint(); break;
+
+    case "save-cat": {
+      const inp = $("#fCat", document.getElementById("screen-"+f.i));
+      const v2 = (inp ? inp.value : "").trim();
+      const s = f.sheet;
+      if(!v2){ s.error = "请填写分类名"; paintFrame(f); return; }
+      if(store.categories.some(c => c.name === v2 && c.id !== s.id)){ s.error = "已有同名分类"; paintFrame(f); return; }
+      if(s.kind === "add-cat"){
+        store.categories.splice(store.categories.length-1, 0, {
+          id:"c"+Math.random().toString(36).slice(2,7), name:v2,
+          color:CAT_PALETTE[store.categories.length % CAT_PALETTE.length], system:false,
+        });
+      } else {
+        const c = store.categories.find(c => c.id === s.id); if(c) c.name = v2;
+      }
+      f.sheet = null; paint(); break;
+    }
+
+    case "add-cat":
+      f.sheet = { kind:"add-cat", value:"", error:"" }; paintFrame(f); break;
+    case "rename-cat": {
+      const c = store.categories.find(x => x.id === el.dataset.id);
+      f.sheet = { kind:"rename-cat", id:c.id, value:c.name, error:"" }; paintFrame(f); break;
+    }
+    case "del-cat": {
+      const id = el.dataset.id;
+      const n = store.records.filter(r => r.cat === id).length;
+      store.records.forEach(r => { if(r.cat === id) r.cat = "uncat"; });
+      store.categories = store.categories.filter(c => c.id !== id);
+      paint();
+      toast(f, n ? `分类已删除，${n} 条记录已迁移到「未分类」` : "分类已删除");
+      break;
+    }
+
+    case "export":
+      f.sheet = { kind:"export" }; paintFrame(f); break;
+    case "export-do": {
+      if(f.sheet && f.sheet.exporting) break;      /* 生成中：忽略重复点击 */
+      const n = store.records.length;
+      f.sheet = { kind:"export", exporting:true }; paintFrame(f);
+      setTimeout(() => {
+        f.sheet = null; paintFrame(f);
+        toast(f, `已生成 CSV · ${n} 条记录（原型只做预览，未真实写文件）`);
+      }, 700);
+      break;
+    }
+
+    case "wipe-ask":
+      f.sheet = { kind:"confirm-wipe" }; paintFrame(f); break;
+    case "wipe-do":
+      store.records = []; store.categories = baseCategories();
+      f.sheet = null; f.settingsStack = ["root"]; paint(); toast(f, "已清空全部数据"); break;
+  }
+});
+
+/* 点击记录行 → 编辑 */
+let suppressRowClick = false;
+document.addEventListener("click", e => {
+  const face = e.target.closest("[data-row]");
+  if(!face) return;
+  if(suppressRowClick){ suppressRowClick = false; return; }
+  const dev = face.closest(".device"); if(!dev) return;
+  const f = frames[+dev.dataset.frameIndex];
+  if(f.swiped){ f.swiped = null; paintFrame(f); return; }
+  const r = store.records.find(x => x.id === face.dataset.row);
+  if(!r) return;
+  openEditor(f, { editing:r.id, amount:String(r.amount), title:r.title, cat:r.cat,
+                  timeQuick:null, timeText: fmtTimeInput(r.ts) });
+});
+
+/* 长按录音 */
+document.addEventListener("pointerdown", e => {
+  const el = e.target.closest('[data-action="voice-down"]');
+  if(!el) return;
+  e.preventDefault();
+  const dev = el.closest(".device");
+  const f = frames[+dev.dataset.frameIndex];
+  if(ui.voiceDemo === "denied"){ f.overlay = "denied"; paintFrame(f); return; }
+  voice = { f, startY: e.clientY, cancel:false };
+  startVoice(f);
+});
+document.addEventListener("pointermove", e => {
+  if(!voice) return;
+  const dy = e.clientY - voice.startY;
+  const want = dy < -60;
+  if(want !== voice.cancel){
+    voice.cancel = want;
+    voice.f.recCancel = want;
+    const mic = document.getElementById("voiceMic");
+    const hint = document.getElementById("voiceHint");
+    if(mic) mic.classList.toggle("cancel", want);
+    if(hint) hint.textContent = want ? "松手取消这一笔" : "正在聆听…说话时不用凑近麦克风";
+  }
+});
+document.addEventListener("pointerup", () => {
+  if(!voice) return;
+  const { f, cancel } = voice; voice = null;
+  endVoice(f, cancel);
+});
+document.addEventListener("pointercancel", () => {
+  if(!voice) return;
+  const { f } = voice; voice = null; endVoice(f, true);
+});
+document.addEventListener("contextmenu", e => {
+  if(e.target.closest('[data-action="voice-down"]')) e.preventDefault();
+});
+
+/* 左滑删除 */
+let swipe = null;
+document.addEventListener("pointerdown", e => {
+  const face = e.target.closest("[data-row]");
+  if(!face || e.target.closest("[data-action]")) return;
+  swipe = { face, x:e.clientX, dx:0, moved:false, dev:face.closest(".device") };
+});
+document.addEventListener("pointermove", e => {
+  if(!swipe) return;
+  swipe.dx = e.clientX - swipe.x;
+  if(Math.abs(swipe.dx) > 6){
+    swipe.moved = true;
+    swipe.face.style.transition = "none";
+  }
+  if(swipe.dx < 0) swipe.face.style.transform = `translateX(${Math.max(-76, swipe.dx)}px)`;
+});
+document.addEventListener("pointerup", () => {
+  if(!swipe) return;
+  const { face, dx, moved, dev } = swipe; swipe = null;
+  face.style.transition = "";
+  if(!dev) return;
+  const f = frames[+dev.dataset.frameIndex];
+  if(!moved){ face.style.transform = ""; return; }
+  suppressRowClick = true;                    /* 拖过的这一次不要触发「点开编辑」 */
+  if(dx < -38){ f.swiped = face.dataset.row; }
+  else { f.swiped = null; }
+  paintFrame(f);
+});
+
+/* Tweaks */
+$("#tweakBtn").addEventListener("click", () => {
+  const p = $("#tweakPanel");
+  const open = p.dataset.open === "1" ? "0" : "1";
+  p.dataset.open = open;
+  $("#tweakBtn").setAttribute("aria-expanded", open === "1" ? "true" : "false");
+});
+$("#tweakPanel").addEventListener("click", e => {
+  const b = e.target.closest("button"); if(!b) return;
+  const g = b.closest("[data-tweak]");
+  if(g){
+    const key = g.dataset.tweak;
+    ui[key] = (key === "scale") ? Number(b.dataset.v) : b.dataset.v;
+    if(key === "theme"){ setPalette(); syncTweakUI(); return; }   /* 只换装，不重建 */
+    paint(); return;
+  }
+  const act = b.dataset.act;
+  if(act === "reset"){ store.categories = baseCategories(); store.records = seedRecords(); paint(); toastAll("已恢复示例数据"); }
+  if(act === "wipe"){ store.records = []; store.categories = baseCategories(); paint(); toastAll("已清空（点「恢复示例数据」可还原）"); }
+});
+function toastAll(text){ frames.forEach(f => toast(f, text)); }
+
+window.addEventListener("resize", fitScale);
+
+/* 起手 */
+build();
+</script>
+</body>
+</html>

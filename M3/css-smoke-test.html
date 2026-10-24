@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>CSS-only smoke test · 深色语音记账 App 视觉资产</title>
+<style>
+  :root{
+    --bg:#0B0B0C; --bg-2:#121214; --card:#17181A; --card-2:#1F2022; --card-3:#242528;
+    --line:#26272B; --ink:#F5F6F7; --ink-2:#A2A4AB; --ink-3:#7A7C83; --ink-4:#5C5E65;
+    --lime:#C8F169; --lime-deep:#8FBF3A; --copper:#D9794F;
+    --r-s:10px; --r-m:14px; --r-l:22px; --r-xl:28px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"SF Pro Text","Segoe UI","PingFang SC",sans-serif;
+    padding:36px;display:flex;flex-direction:column;gap:32px}
+  h2{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+     color:var(--ink-4);margin:0 0 12px}
+  .row{display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap}
+  .cap{font-size:11px;color:var(--ink-4);margin-top:10px;letter-spacing:.02em}
+
+  /* ---------- 1. CSS-only 3:2 asset card (no bitmap) ---------- */
+  .asset-wrap{perspective:1100px}
+  .asset-card{
+    position:relative;width:420px;aspect-ratio:3/2;border-radius:var(--r-l);
+    background:linear-gradient(135deg,#7FE3FF 0%,#3B6FE0 55%,#2A2F8F 100%);
+    box-shadow:
+      0 24px 60px rgba(59,111,224,.28),
+      inset 0 1px 0 rgba(255,255,255,.35),
+      inset 0 0 0 1px rgba(255,255,255,.12);
+    overflow:hidden;
+    transform-style:preserve-3d;
+    transform:rotateX(12deg) rotateY(-16deg);
+  }
+  /* 挤出法做厚度：8 层 1px 递进阴影 = 侧边体块 */
+  .asset-card .edge{
+    position:absolute;inset:0;border-radius:inherit;background:#101438;
+    transform:translateZ(-12px);
+    box-shadow:
+      1px 1px 0 #101438,2px 2px 0 #0E1230,3px 3px 0 #0C102A,4px 4px 0 #0A0E24,
+      5px 5px 0 #080C1E,6px 6px 0 #060A18,7px 7px 0 #050813,8px 8px 0 #04060E,
+      9px 9px 0 #03050A,10px 10px 0 #020306;
+  }
+  .asset-card::before{ /* 斜向高光带 */
+    content:"";position:absolute;inset:-20% -10%;
+    background:linear-gradient(115deg,rgba(255,255,255,.22) 0%,rgba(255,255,255,.06) 26%,transparent 44%);
+  }
+  .asset-card::after{ /* 账本横线暗纹 */
+    content:"";position:absolute;inset:0;
+    background:repeating-linear-gradient(0deg,rgba(255,255,255,.06) 0 1px,transparent 1px 22px);
+  }
+  .asset-card .glow{ /* 右下外溢光 */
+    position:absolute;right:-30px;bottom:-30px;width:180px;height:180px;border-radius:50%;
+    background:radial-gradient(circle,rgba(127,227,255,.30),transparent 68%);
+  }
+  .asset-card .lime-dot{position:absolute;left:22px;top:22px;width:8px;height:8px;border-radius:50%;
+    background:var(--lime);box-shadow:0 0 14px rgba(200,241,105,.7)}
+
+  /* ---------- 2. CSS-only ambient texture (16:9) ---------- */
+  .ambient{
+    position:relative;width:420px;aspect-ratio:16/9;border-radius:var(--r-m);overflow:hidden;
+    background:radial-gradient(120% 90% at 20% 0%,#17181A 0%,#0B0B0C 72%);
+    box-shadow:inset 0 0 0 1px var(--line);
+  }
+  .ambient::before{
+    content:"";position:absolute;inset:0;
+    background:repeating-linear-gradient(45deg,rgba(255,255,255,.035) 0 1px,transparent 1px 48px);
+  }
+  .ambient::after{
+    content:"";position:absolute;right:-60px;bottom:-80px;width:280px;height:280px;border-radius:50%;
+    background:radial-gradient(circle,rgba(200,241,105,.06),transparent 70%);
+  }
+  .ambient .curves{position:absolute;inset:0;opacity:.5}
+
+  /* ---------- 3. layer stack: bg -> card -> row ---------- */
+  .stack{width:340px;background:var(--card);border-radius:var(--r-l);padding:18px 18px 6px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 0 0 1px var(--line),0 18px 40px rgba(0,0,0,.5)}
+  .stack .rowline{display:flex;align-items:center;gap:12px;padding:13px 0;
+    border-bottom:1px solid rgba(255,255,255,.045)}
+  .stack .rowline:last-child{border-bottom:0}
+  .tile{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;
+    background:linear-gradient(180deg,var(--card-2),var(--card));color:var(--lime);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 0 1px rgba(255,255,255,.03)}
+  .rl-l{flex:1;font-size:14px;color:var(--ink)}
+  .rl-r{font-size:14px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+
+  /* ---------- 4. capsule filter + floating glass nav ---------- */
+  .device{width:340px;height:300px;border-radius:38px;background:var(--bg-2);position:relative;
+    overflow:hidden;box-shadow:inset 0 0 0 1px var(--line)}
+  .caps{display:flex;gap:8px;padding:20px 18px}
+  .cap-item{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;
+    font-size:12.5px;background:var(--card-2);color:var(--ink-2);box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+  .cap-item.on{background:#FFFFFF;color:#0B0B0C;font-weight:650;box-shadow:0 6px 16px rgba(0,0,0,.35)}
+  .nav{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);
+    display:flex;gap:6px;padding:8px;border-radius:999px;
+    background:rgba(36,37,40,.62);backdrop-filter:blur(22px) saturate(1.4);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 16px 34px rgba(0,0,0,.6)}
+  .nav i{width:44px;height:34px;border-radius:999px;display:grid;place-items:center;
+    color:var(--ink-4);font-style:normal;font-size:14px}
+  .nav i.on{background:var(--lime);color:#0B0B0C}
+
+  /* ---------- 5. chart: lime line + right-side Y axis, dashed faint grid ---------- */
+  .chart{width:420px;height:210px;position:relative;padding:14px 0 22px}
+  .chart .grid{position:absolute;inset:14px 0 22px;background:
+    repeating-linear-gradient(0deg,rgba(255,255,255,.07) 0 1px,transparent 1px 44px)}
+  .axis-r{position:absolute;right:0;top:6px;bottom:14px;display:flex;flex-direction:column;
+    justify-content:space-between;font-size:10px;color:var(--ink-4);text-align:right;
+    font-variant-numeric:tabular-nums;padding-left:8px}
+  .axis-x{position:absolute;left:0;right:34px;bottom:0;display:flex;justify-content:space-between;
+    font-size:10px;color:var(--ink-4)}
+  .baseline{position:absolute;left:0;right:34px;bottom:20px;height:1px;background:rgba(255,255,255,.10)}
+  .fill{position:absolute;right:34px;bottom:20px;left:0;height:96px;
+    background:linear-gradient(180deg,rgba(200,241,105,.22),rgba(200,241,105,0))}
+  .big{font-size:44px;font-weight:750;letter-spacing:-.035em;font-variant-numeric:tabular-nums}
+  .tiny{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-4)}
+</style>
+</head>
+<body>
+
+<div class="row">
+  <div>
+    <h2>1 · 资产对象卡（纯 CSS，0KB 位图）</h2>
+    <div class="asset-wrap"><div class="asset-card"><span class="edge"></span><span class="glow"></span><span class="lime-dot"></span></div></div>
+    <p class="cap">渐变 + 内高光 + 高光带 + 账本暗纹 + 接触阴影 + <b>8 层挤出侧边</b>（rotateX 12° / rotateY -16°）</p>
+  </div>
+  <div>
+    <h2>2 · 统计页氛围背景（纯 CSS，0KB 位图）</h2>
+    <div class="ambient"><svg class="curves" viewBox="0 0 420 236" preserveAspectRatio="none">
+      <g fill="none" stroke="rgba(255,255,255,.05)" stroke-width="1">
+        <circle cx="380" cy="230" r="90"/><circle cx="380" cy="230" r="140"/>
+        <circle cx="380" cy="230" r="190"/><circle cx="380" cy="230" r="240"/>
+      </g></svg></div>
+    <p class="cap">径向底渐变 + 45° 细网格（35% 白 / 4% 不透明度）+ 右下青柠晕（6% 上限）</p>
+  </div>
+</div>
+
+<div class="row">
+  <div>
+    <h2>3 · 三层材质栈（底 → 卡 → 行）</h2>
+    <div class="stack">
+      <div class="rowline"><span class="tile">◔</span><span class="rl-l">Spending Alerts</span><span class="rl-r">On</span></div>
+      <div class="rowline"><span class="tile">◑</span><span class="rl-l">Premium Plan</span><span class="rl-r">3.00</span></div>
+      <div class="rowline"><span class="tile">◕</span><span class="rl-l">Artificial Intelligent</span><span class="rl-r">+14.00</span></div>
+    </div>
+    <p class="cap">卡内行分隔线用 rgba(255,255,255,.045)——比 --line 更淡，肉眼近乎不可见</p>
+  </div>
+  <div>
+    <h2>4 · 胶囊筛选 + 悬浮毛玻璃导航</h2>
+    <div class="device">
+      <div class="caps">
+        <span class="cap-item on">◎ Balance</span>
+        <span class="cap-item">▤ Expenses</span>
+        <span class="cap-item">◇ Goals</span>
+      </div>
+      <div style="padding:6px 20px">
+        <div class="tiny">Total Balance</div>
+        <div class="big">$149.51</div>
+      </div>
+      <div class="nav"><i class="on">⌂</i><i>▤</i><i>◔</i><i>⚙</i></div>
+    </div>
+    <p class="cap">选中胶囊 = #FFFFFF 底 + #0B0B0C 字；导航 = rgba(36,37,40,.62) + blur(22px)</p>
+  </div>
+</div>
+
+<div class="row">
+  <div>
+    <h2>5 · 图表（青柠折线 + Y 轴在右 + 极淡虚线网格）</h2>
+    <div class="chart">
+      <svg viewBox="0 0 420 210" preserveAspectRatio="none" style="position:absolute;inset:0 34px 0 0">
+        <defs><linearGradient id="f" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#C8F169" stop-opacity=".26"/>
+          <stop offset="1" stop-color="#C8F169" stop-opacity="0"/></linearGradient></defs>
+        <g stroke="rgba(255,255,255,.13)" stroke-width="1" stroke-dasharray="5 7">
+          <line x1="0" y1="34" x2="420" y2="34"/><line x1="0" y1="78" x2="420" y2="78"/>
+          <line x1="0" y1="122" x2="420" y2="122"/><line x1="0" y1="166" x2="420" y2="166"/>
+        </g>
+        <path d="M0,150 L60,120 L120,140 L180,72 L240,92 L300,42 L360,60 L360,190 L0,190 Z" fill="url(#f)"/>
+        <path d="M0,150 L60,120 L120,140 L180,72 L240,92 L300,42 L360,60" fill="none"
+              stroke="#C8F169" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        <line x1="0" y1="190" x2="360" y2="190" stroke="rgba(255,255,255,.10)" stroke-width="1"/>
+      </svg>
+      <div class="axis-r"><span>$250</span><span>$100</span><span>$0</span></div>
+      <div class="baseline"></div>
+      <div class="axis-x"><span>29 May</span><span>12 Jun</span><span>29 Jun</span></div>
+    </div>
+    <p class="cap">无外框，只有一条 10% 白基线；网格为 7% 白实线（参考图观感等同虚线）</p>
+  </div>
+</div>
+
+</body>
+</html>
